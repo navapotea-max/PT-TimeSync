@@ -19,12 +19,12 @@ function savedTheme(): ThemeChoice {
   try { return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light"; } catch { return "light"; }
 }
 
-/** ปุ่มเลือก โหมดสว่าง / โหมดมืด (ค่าเริ่มต้น = สว่าง, ระบบจำค่าที่เลือกไว้) */
-export function ThemeToggle({ compact = false }: { compact?: boolean }) {
-  const [choice, setChoice] = useState<ThemeChoice>("light");
+/** สวิตช์เปิด/ปิด: เปิด = โหมดมืด, ปิด = โหมดสว่าง (ค่าเริ่มต้น = ปิด, ระบบจำค่าที่เลือกไว้) */
+export function ThemeToggle() {
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    setChoice(savedTheme());
+    setDark(savedTheme() === "dark");
     // พิมพ์ / PDF ใช้โหมดสว่างเสมอ
     const before = () => document.documentElement.classList.remove("dark");
     const after = () => applyTheme(savedTheme());
@@ -36,25 +36,23 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
-  function set(c: ThemeChoice) {
-    setChoice(c);
-    try { localStorage.setItem(THEME_KEY, c); } catch { /* ignore */ }
-    applyTheme(c);
+  function toggle() {
+    const next: ThemeChoice = dark ? "light" : "dark";
+    setDark(!dark);
+    try { localStorage.setItem(THEME_KEY, next); } catch { /* ignore */ }
+    applyTheme(next);
   }
 
-  const opts: { v: ThemeChoice; icon: string; label: string }[] = [
-    { v: "light", icon: "☀️", label: "โหมดสว่าง" },
-    { v: "dark", icon: "🌙", label: "โหมดมืด" },
-  ];
   return (
-    <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="ธีม">
-      {opts.map((o) => (
-        <button key={o.v} type="button" title={o.label} aria-pressed={choice === o.v} onClick={() => set(o.v)}
-          className={`rounded px-2 py-1 text-xs ${choice === o.v ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"}`}>
-          {o.icon}{!compact && <span className="ml-1 hidden sm:inline">{o.label}</span>}
-        </button>
-      ))}
-    </div>
+    <button type="button" role="switch" aria-checked={dark} onClick={toggle}
+      aria-label="โหมดมืด" title={dark ? "ปิดโหมดมืด" : "เปิดโหมดมืด"}
+      className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full border transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+        ${dark ? "border-brand-500 bg-brand-600" : "border-slate-300 bg-slate-200"}`}>
+      <span className={`absolute left-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#ffffff] text-sm shadow transition-transform duration-300
+        ${dark ? "translate-x-7" : "translate-x-0"}`}>
+        {dark ? "🌙" : "☀️"}
+      </span>
+    </button>
   );
 }
 

@@ -43,7 +43,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-900 to-brand-600 p-4 dark:from-slate-950 dark:to-brand-900">
-      <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
+      <div className="absolute right-4 top-4"><ThemeToggle /></div>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-xl">
         <div className="mb-6 text-center">
           <Logo size={120} className="mx-auto mb-3" />
