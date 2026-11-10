@@ -18,8 +18,8 @@ export const REQUEST_TYPES: Record<string, string> = {
 };
 
 export const REQUEST_STATUS: Record<string, { label: string; cls: string }> = {
-  pending: { label: "รอดำเนินการ", cls: "bg-amber-100 text-amber-800" },
-  in_progress: { label: "กำลังดำเนินการ", cls: "bg-sky-100 text-slate-800" },
-  completed: { label: "เสร็จสิ้น", cls: "bg-green-100 text-green-800" },
-  rejected: { label: "ปฏิเสธ", cls: "bg-red-100 text-red-800" },
+  pending: { label: "รอดำเนินการ", cls: "chip-amber" },
+  in_progress: { label: "กำลังดำเนินการ", cls: "chip-blue" },
+  completed: { label: "เสร็จสิ้น", cls: "chip-green" },
+  rejected: { label: "ปฏิเสธ", cls: "chip-red" },
 };

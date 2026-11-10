@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { usePrivacy } from "@/components/Preferences";
+import { DAY_DOT } from "@/components/TimetableGrid";
 import { useProfile } from "@/components/ProfileProvider";
 import { configOf, DAY_NAMES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
@@ -66,31 +68,42 @@ export default function AvailabilityPage() {
   }
 
   if (!teachers.length) {
-    return <div className="card text-slate-500">บัญชีนี้ยังไม่ได้ผูกกับข้อมูลครู (ให้ผู้ดูแลระบบใส่อีเมลของท่านในข้อมูลครู หรือผูกที่เมนูจัดการผู้ใช้)</div>;
+    return (
+      <div className="space-y-5">
+        <PageHeader title="กำหนดเวลาที่ไม่สะดวกสอน" />
+        <div className="card text-sm text-slate-500 dark:text-slate-400">
+          บัญชีนี้ยังไม่ได้ผูกกับข้อมูลครู — ให้ผู้ดูแลระบบใส่อีเมลของท่านในข้อมูลครู หรือผูกบัญชีที่เมนู “ผู้ใช้งานและสิทธิ์”
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">เวลาที่ไม่สะดวกสอน</h1>
-      <div className="card space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[260px]">
+    <div className="space-y-5">
+      <PageHeader title="กำหนดเวลาที่ไม่สะดวกสอน"
+        subtitle={`คลิกที่ช่องตารางเพื่อระบุคาบที่ติดภารกิจหรือราชการ (เลือกไว้ ${cells.size} คาบ)`} />
+      <div className="card space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="w-full max-w-sm">
             <label className="label">ครูผู้สอน</label>
             <select className="input" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} disabled={!isAdmin}>
               {teachers.map((t) => <option key={t.id} value={t.id}>{t.teacher_code} — {privacy.name(t.name)}</option>)}
             </select>
           </div>
-          <p className="text-sm text-slate-500">คลิกช่องเพื่อทำเครื่องหมาย ✕ = ไม่สะดวกสอน</p>
-          <button className="btn-primary ml-auto" onClick={save}>บันทึก</button>
+          <div className="flex gap-2">
+            <button className="btn-secondary" onClick={() => setCells(new Set())}>ล้างทั้งหมด</button>
+            <button className="btn-primary" onClick={save}>บันทึกการตั้งค่า</button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="border-collapse text-sm">
+        <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead>
               <tr>
-                <th className="border border-slate-300 bg-slate-100 p-2">วัน</th>
+                <th className="th w-32">วัน / คาบ</th>
                 {config.periods.map((p) => (
-                  <th key={p.no} className="border border-slate-300 bg-slate-100 p-2">
-                    {p.no}<div className="text-[10px] font-normal text-slate-500">{p.start}</div>
+                  <th key={p.no} className="th text-center">
+                    <div className="text-slate-700 dark:text-slate-200">คาบ {p.no}</div>
+                    {p.start && <div className="font-mono text-[10px] font-normal text-slate-400">{p.start}-{p.end}</div>}
                   </th>
                 ))}
               </tr>
@@ -98,14 +111,20 @@ export default function AvailabilityPage() {
             <tbody>
               {config.days.map((d) => (
                 <tr key={d}>
-                  <td className="border border-slate-300 p-2 font-medium">{DAY_NAMES[d]}</td>
+                  <td className="td font-semibold">
+                    <span className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${DAY_DOT[d]}`} />{DAY_NAMES[d]}</span>
+                  </td>
                   {config.periods.map((p) => {
                     const k = `${d}|${p.no}`;
                     const on = cells.has(k);
                     return (
-                      <td key={k} onClick={() => toggle(k)}
-                        className={`h-12 w-16 cursor-pointer border border-slate-300 text-center text-lg ${on ? "bg-red-100 text-red-600" : "hover:bg-slate-50"}`}>
-                        {on ? "✕" : ""}
+                      <td key={k} onClick={() => toggle(k)} role="button" aria-pressed={on}
+                        className={`h-14 cursor-pointer select-none border-b border-l border-slate-100 text-center transition dark:border-slate-800 ${on
+                          ? "bg-red-50/70 dark:bg-red-500/10"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-800/60"}`}>
+                        {on
+                          ? <span className="chip-red">ไม่สะดวก</span>
+                          : <span className="text-[11px] text-slate-300 dark:text-slate-600">ว่าง</span>}
                       </td>
                     );
                   })}
@@ -114,7 +133,7 @@ export default function AvailabilityPage() {
             </tbody>
           </table>
         </div>
-        {msg && <p className="text-sm text-brand-700">{msg}</p>}
+        {msg && <p className="text-sm text-brand-700 dark:text-brand-300">{msg}</p>}
       </div>
     </div>
   );

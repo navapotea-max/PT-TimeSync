@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { AdminOnly, useProfile } from "@/components/ProfileProvider";
 import { BACKUP_TABLES, backupToExcel, createBackup, restoreBackup, validateBackup, type BackupFile } from "@/lib/backup";
 import { createClient } from "@/lib/supabase/client";
@@ -33,7 +34,7 @@ export default function BackupPage() {
   const loadFiles = useCallback(async () => {
     const { data, error } = await supabase.storage.from("backups").list("", { sortBy: { column: "created_at", order: "desc" }, limit: 100 });
     if (error) addLog(`อ่านรายการไฟล์ใน Storage ไม่ได้: ${error.message} (รันไฟล์ SQL อัปเดตแล้วหรือยัง?)`);
-    setFiles(((data ?? []) as StoredFile[]).filter((f) => f.name.endsWith(".json")));
+    setFiles((Array.isArray(data) ? (data as StoredFile[]) : []).filter((f) => f.name?.endsWith(".json")));
   }, [supabase]);
 
   useEffect(() => { loadFiles(); }, [loadFiles]);
@@ -125,13 +126,14 @@ export default function BackupPage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">สำรอง / กู้คืนข้อมูล</h1>
+      <div className="space-y-5">
+        <PageHeader title="สำรองและกู้คืนฐานข้อมูล"
+          subtitle="ส่งออกข้อมูลทั้งระบบเก็บไว้เป็นไฟล์ .json และกู้คืนข้อมูลย้อนหลังได้ตลอดเวลา" />
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="card space-y-3 text-sm">
-            <h2 className="font-semibold">สร้างไฟล์สำรองข้อมูล</h2>
-            <p className="text-slate-500">สำรอง: {BACKUP_TABLES.map((t) => t.label).join(", ")}</p>
+            <h2 className="card-title">สร้างไฟล์สำรองข้อมูล</h2>
+            <p className="text-xs text-slate-500">ครอบคลุมข้อมูล: {BACKUP_TABLES.map((t) => t.label).join(", ")}</p>
             <label className="flex items-center gap-2">
               <input type="checkbox" className="h-4 w-4" checked={saveCloud} onChange={(e) => setSaveCloud(e.target.checked)} />
               เก็บสำเนาไว้ใน Supabase Storage ด้วย
@@ -148,7 +150,8 @@ export default function BackupPage() {
           </div>
 
           <div className="card space-y-3 text-sm">
-            <h2 className="font-semibold">กู้คืนจากไฟล์ในเครื่อง</h2>
+            <h2 className="card-title">กู้คืนข้อมูลย้อนหลัง</h2>
+            <p className="text-xs text-slate-500">เลือกไฟล์สำรอง (.json) จากเครื่อง หรือกด “กู้คืน” ที่ไฟล์ในระบบคลาวด์ด้านล่าง</p>
             <input type="file" accept=".json,application/json" className="input"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) openFile(f); e.target.value = ""; }} />
             <p className="text-xs text-slate-500">ระบบจะสำรองข้อมูลปัจจุบันให้อัตโนมัติก่อนกู้คืนทุกครั้ง</p>
@@ -156,12 +159,12 @@ export default function BackupPage() {
         </div>
 
         {pending && (
-          <div className="card space-y-3 border-amber-400 text-sm">
-            <h2 className="font-semibold">กู้คืนจาก: {pending.source}</h2>
+          <div className="card space-y-3 border-amber-300 text-sm dark:border-amber-500/40">
+            <h2 className="card-title">กู้คืนจาก: <span className="font-mono">{pending.source}</span></h2>
             <p>สร้างเมื่อ {new Date(pending.backup.created_at).toLocaleString("th-TH")} โดย {pending.backup.created_by ?? "-"}</p>
             <div className="flex flex-wrap gap-2">
               {BACKUP_TABLES.map((t) => (
-                <span key={t.table} className="rounded bg-slate-100 px-2 py-0.5">{t.label}: {pending.backup.counts[t.table] ?? 0}</span>
+                <span key={t.table} className="chip-gray">{t.label}: {pending.backup.counts[t.table] ?? 0}</span>
               ))}
             </div>
             {pending.backup.anonymized ? (
@@ -196,23 +199,23 @@ export default function BackupPage() {
         )}
 
         {log.length > 0 && (
-          <div className="card max-h-72 space-y-1 overflow-y-auto font-mono text-xs">{log.map((l, i) => <p key={i}>{l}</p>)}</div>
+          <div className="card max-h-72 space-y-1 overflow-y-auto font-mono text-xs text-slate-700 dark:text-slate-300">{log.map((l, i) => <p key={i}>{l}</p>)}</div>
         )}
 
         <div className="card overflow-x-auto p-0">
-          <h2 className="p-4 font-semibold">ไฟล์สำรองใน Supabase Storage</h2>
+          <h2 className="card-title px-5 py-4">ไฟล์สำรองในระบบคลาวด์ (Supabase Storage)</h2>
           <table className="w-full">
-            <thead><tr><th className="th">ชื่อไฟล์</th><th className="th">วันที่</th><th className="th">ขนาด</th><th className="th"></th></tr></thead>
+            <thead><tr><th className="th">ชื่อไฟล์</th><th className="th">วันที่สร้าง</th><th className="th">ขนาดไฟล์</th><th className="th text-right">จัดการ</th></tr></thead>
             <tbody>
               {files.map((f) => (
                 <tr key={f.name}>
                   <td className="td font-mono text-xs">{f.name}</td>
                   <td className="td">{new Date(f.created_at).toLocaleString("th-TH")}</td>
-                  <td className="td">{f.metadata?.size ? `${(f.metadata.size / 1024).toFixed(0)} KB` : "-"}</td>
+                  <td className="td font-mono text-xs">{f.metadata?.size ? `${(f.metadata.size / 1024).toFixed(0)} KB` : "-"}</td>
                   <td className="td whitespace-nowrap text-right">
-                    <button className="mr-3 text-brand-600 hover:underline" onClick={() => downloadStored(f.name)}>ดาวน์โหลด</button>
-                    <button className="mr-3 text-brand-600 hover:underline" disabled={busy || f.name.includes("anonymized")} onClick={() => openStored(f.name)}>กู้คืน</button>
-                    <button className="text-red-600 hover:underline" onClick={() => removeStored(f.name)}>ลบ</button>
+                    <button className="mr-4 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => downloadStored(f.name)}>ดาวน์โหลด</button>
+                    <button className="mr-4 text-xs font-semibold text-brand-600 hover:underline disabled:opacity-40 dark:text-brand-400" disabled={busy || f.name.includes("anonymized")} onClick={() => openStored(f.name)}>กู้คืน</button>
+                    <button className="text-xs text-slate-400 hover:text-red-600" onClick={() => removeStored(f.name)}>ลบ</button>
                   </td>
                 </tr>
               ))}

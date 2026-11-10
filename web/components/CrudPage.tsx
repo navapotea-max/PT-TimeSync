@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import DataTabs from "@/components/DataTabs";
+import { IconPlus, IconSearch, IconX } from "@/components/Icons";
 import { maskEmail, maskName, usePrivacy } from "@/components/Preferences";
 import { coerce, type Entity, type Field } from "@/lib/entities";
 import { createClient } from "@/lib/supabase/client";
@@ -143,25 +145,32 @@ export default function CrudPage({ entity }: { entity: Entity }) {
   const tableFields = entity.fields.filter((f) => !f.hideInTable);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="mr-auto text-2xl font-bold">{entity.title}</h1>
+    <div className="space-y-5">
+      <DataTabs />
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="mr-auto">
+          <h1 className="page-title">{entity.title}</h1>
+          <p className="page-sub">แสดงผล {filtered.length} รายการ</p>
+        </div>
         {hasSemester && (
           <select className="input w-auto" value={filterSemester} onChange={(e) => setFilterSemester(e.target.value)}>
             <option value="">ทุกภาคเรียน</option>
             {fkOptions.semester_id?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         )}
-        <input className="input w-60" placeholder="ค้นหา..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <button className="btn-primary" onClick={openNew}>+ เพิ่ม{entity.title}</button>
+        <div className="relative">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+          <input className="input w-64 pl-8" placeholder={`ค้นหา${entity.title}...`} value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <button className="btn-primary" onClick={openNew}><IconPlus className="h-3.5 w-3.5" />เพิ่ม{entity.title}</button>
       </div>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full">
           <thead>
             <tr>
-              {tableFields.map((f) => <th key={f.key} className="th">{f.label}</th>)}
-              <th className="th w-32"></th>
+              {tableFields.map((f) => <th key={f.key} className="th whitespace-nowrap">{f.label}</th>)}
+              <th className="th w-32 text-right">จัดการ</th>
             </tr>
           </thead>
           <tbody>
@@ -170,23 +179,24 @@ export default function CrudPage({ entity }: { entity: Entity }) {
               <tr><td className="td text-center text-slate-400" colSpan={99}>ไม่มีข้อมูล</td></tr>
             )}
             {filtered.map((r) => (
-              <tr key={r.id} className="hover:bg-slate-50">
+              <tr key={r.id} className="transition hover:bg-slate-50/70 dark:hover:bg-slate-800/40">
                 {tableFields.map((f) => <td key={f.key} className="td">{display(f, r[f.key], fkOptions, privacy)}</td>)}
                 <td className="td whitespace-nowrap text-right">
-                  <button className="mr-3 text-brand-600 hover:underline" onClick={() => openEdit(r)}>แก้ไข</button>
-                  <button className="text-red-600 hover:underline" onClick={() => remove(r)}>ลบ</button>
+                  <button className="mr-4 text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400" onClick={() => openEdit(r)}>แก้ไข</button>
+                  <button className="text-xs text-slate-400 hover:text-red-600 dark:hover:text-red-400" onClick={() => remove(r)}>ลบ</button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-slate-500">ทั้งหมด {filtered.length} รายการ</p>
-
       {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
-            <h2 className="mb-4 text-lg font-semibold">{editId ? "แก้ไข" : "เพิ่ม"}{entity.title}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[1px]">
+          <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">{editId ? "แก้ไข" : "เพิ่ม"}{entity.title}</h2>
+              <button className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" onClick={() => setEditing(null)} aria-label="ปิด"><IconX /></button>
+            </div>
             <div className="space-y-3">
               {entity.fields.map((f) => (
                 <div key={f.key}>

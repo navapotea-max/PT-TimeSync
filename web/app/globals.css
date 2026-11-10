@@ -3,62 +3,83 @@
 @tailwind utilities;
 
 :root { color-scheme: light; }
-body { @apply bg-slate-50 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100; }
+body {
+  @apply bg-ink-bg font-sans text-slate-900 antialiased selection:bg-brand-100 selection:text-brand-800;
+}
+.dark body { @apply bg-ink-dark text-slate-100; }
+input[type="checkbox"], input[type="radio"] { accent-color: #0f766e; }
 
 @layer components {
-  .btn { @apply inline-flex items-center justify-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700; }
-  .btn-danger { @apply btn bg-red-600 text-white hover:bg-red-700; }
-  .input { @apply w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100; }
-  .label { @apply mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300; }
-  .card { @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900; }
-  .th { @apply border-b border-slate-200 bg-slate-100 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300; }
-  .td { @apply border-b border-slate-100 px-3 py-2 text-sm dark:border-slate-800; }
-  .slot-blocked { background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 6px, #e2e8f0 6px, #e2e8f0 12px); }
+  /* ปุ่ม */
+  .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-slate-900 text-white shadow-sm hover:bg-slate-800 dark:bg-brand-600 dark:hover:bg-brand-500; }
+  .btn-secondary { @apply btn border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700; }
+  .btn-danger { @apply btn bg-red-600 text-white shadow-sm hover:bg-red-700; }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .link { @apply font-medium text-brand-600 hover:underline dark:text-brand-400; }
+
+  /* ฟอร์ม */
+  .input { @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-white; }
+  .input[type="file"] { @apply cursor-pointer py-1.5 text-slate-500 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-700 dark:file:text-slate-200; }
+  .label { @apply mb-1.5 block text-xs font-semibold text-slate-600 dark:text-slate-300; }
+
+  /* การ์ด / ตาราง */
+  .card { @apply rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900; }
+  .card-title { @apply text-sm font-semibold text-slate-900 dark:text-white; }
+  .th { @apply border-b border-slate-200/80 bg-slate-50 px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400; }
+  .td { @apply border-b border-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300; }
+
+  /* หัวข้อหน้า */
+  .page-title { @apply text-xl font-bold tracking-tight text-slate-900 dark:text-white; }
+  .page-sub { @apply mt-0.5 text-sm text-slate-500 dark:text-slate-400; }
+  .section-label { @apply text-xs font-semibold text-slate-500 dark:text-slate-400; }
+
+  /* ป้ายสถานะ */
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold; }
+  .chip-green { @apply chip bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300; }
+  .chip-amber { @apply chip bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300; }
+  .chip-red { @apply chip bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300; }
+  .chip-blue { @apply chip bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300; }
+  .chip-gray { @apply chip bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300; }
+  .chip-brand { @apply chip bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300; }
+
+  /* ตัวควบคุมแบบแบ่งส่วน (segmented control) */
+  .seg { @apply inline-flex rounded-lg border border-slate-200/90 bg-slate-100/80 p-0.5 dark:border-slate-700 dark:bg-slate-800; }
+  .seg-btn { @apply rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200; }
+  .seg-btn-active { @apply bg-white text-slate-900 shadow-sm hover:text-slate-900 dark:bg-slate-700 dark:text-white dark:hover:text-white; }
+
+  /* คาบที่ห้ามจัด */
+  .slot-blocked { background-color: #f8fafc; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 8px 8px; }
+  .dark .slot-blocked { background-color: #0f172a; background-image: radial-gradient(#334155 1px, transparent 1px); }
 }
 
-/* ---------------------------------------------------------------------
- * โหมดมืด: ปรับสีของ utility ที่ใช้ตรง ๆ ในหน้าต่าง ๆ
- * (คลาส .dark ถูกใส่ที่ <html> โดย ThemeToggle / themeInitScript)
- * --------------------------------------------------------------------- */
-.dark .bg-white { background-color: #0f172a; }
-.dark .bg-slate-50 { background-color: #020617; }
-.dark .bg-slate-100 { background-color: #1e293b; }
-.dark .bg-slate-200 { background-color: #334155; }
-.dark .hover\:bg-slate-50:hover { background-color: #1e293b; }
-.dark .hover\:bg-slate-100:hover { background-color: #334155; }
-.dark .text-slate-800, .dark .text-slate-700 { color: #e2e8f0; }
-.dark .text-slate-600 { color: #cbd5e1; }
-.dark .text-slate-500 { color: #94a3b8; }
-.dark .text-slate-400 { color: #64748b; }
-.dark .border-slate-100, .dark .border-slate-200 { border-color: #1e293b; }
-.dark .border-slate-300 { border-color: #475569; }
-.dark .text-brand-900 { color: #bfdbfe; }
-.dark .text-brand-700, .dark .text-brand-600 { color: #93c5fd; }
-.dark .bg-brand-50 { background-color: rgba(37, 99, 235, 0.18); }
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* กล่องสถานะ / ป้าย */
-.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15); }
-.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.25); }
-.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.12); }
-.dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.22); }
-.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.13); }
-.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.22); }
-.dark .bg-orange-100 { background-color: rgba(249, 115, 22, 0.22); }
-.dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.22); }
-.dark .bg-pink-100 { background-color: rgba(236, 72, 153, 0.22); }
-.dark .bg-sky-100 { background-color: rgba(14, 165, 233, 0.22); }
-.dark .bg-purple-100 { background-color: rgba(168, 85, 247, 0.22); }
-.dark .text-red-600, .dark .text-red-700, .dark .text-red-800 { color: #fca5a5; }
-.dark .text-green-700, .dark .text-green-800 { color: #86efac; }
-.dark .text-amber-800, .dark .text-orange-800 { color: #fcd34d; }
-.dark .border-red-300 { border-color: #7f1d1d; }
-.dark .slot-blocked { background: repeating-linear-gradient(45deg, #1e293b, #1e293b 6px, #273449 6px, #273449 12px); }
+/* ---------------------------------------------------------------------
+ * โหมดมืด: ค่าสำรองสำหรับ utility ที่ไม่มี dark: กำกับไว้
+ * ใช้ :where() เพื่อให้ dark:... ที่เขียนไว้ตรง ๆ มีลำดับความสำคัญสูงกว่าเสมอ
+ * --------------------------------------------------------------------- */
+.dark :where(.bg-white) { background-color: #0f172a; }
+.dark :where(.bg-slate-50) { background-color: #111827; }
+.dark :where(.bg-slate-100) { background-color: #1e293b; }
+.dark :where(.bg-slate-200) { background-color: #334155; }
+.dark :where(.text-slate-900, .text-slate-800, .text-slate-700) { color: #e2e8f0; }
+.dark :where(.text-slate-600) { color: #cbd5e1; }
+.dark :where(.text-slate-500) { color: #94a3b8; }
+.dark :where(.border-slate-100, .border-slate-200) { border-color: #1e293b; }
+.dark :where(.border-slate-300) { border-color: #334155; }
+.dark :where(.bg-red-50) { background-color: rgba(239, 68, 68, 0.12); }
+.dark :where(.bg-amber-50) { background-color: rgba(245, 158, 11, 0.12); }
+.dark :where(.bg-emerald-50, .bg-green-50) { background-color: rgba(16, 185, 129, 0.12); }
+.dark :where(.bg-brand-50) { background-color: rgba(13, 148, 136, 0.14); }
+.dark :where(.text-red-600, .text-red-700) { color: #fca5a5; }
+.dark :where(.text-emerald-700, .text-green-700) { color: #6ee7b7; }
+.dark :where(.text-amber-700, .text-amber-800) { color: #fcd34d; }
+.dark :where(.text-brand-700, .text-brand-600) { color: #5eead4; }
 
 @media print {
   .no-print { display: none !important; }
-  body { background: white; }
+  body { background: white !important; color: black !important; font-family: "Sarabun", sans-serif; }
   .print-area { box-shadow: none !important; border: none !important; padding: 0 !important; }
   @page { size: A4 landscape; margin: 10mm; }
 }

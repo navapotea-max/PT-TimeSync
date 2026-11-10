@@ -18,7 +18,7 @@ export function useProfile(): Profile {
 export function AdminOnly({ children }: { children: React.ReactNode }) {
   const p = useProfile();
   if (p.role !== "admin") {
-    return <div className="card text-center text-slate-500">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>;
+    return <div className="card text-center text-sm text-slate-500 dark:text-slate-400">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>;
   }
   return <>{children}</>;
 }

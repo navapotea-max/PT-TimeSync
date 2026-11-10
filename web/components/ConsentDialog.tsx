@@ -23,9 +23,9 @@ export default function ConsentDialog({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h2 className="mb-2 text-lg font-bold">การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</h2>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px]">
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="mb-2 text-base font-bold text-slate-900 dark:text-white">การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</h2>
         <p className="text-sm text-slate-600">
           ระบบจัดเก็บและใช้ ชื่อ-สกุล อีเมล ตารางสอน/ตารางเรียน และเวลาที่ไม่สะดวกสอนของท่าน
           เพื่อการจัดตารางเรียนตารางสอนของวิทยาลัยเท่านั้น ไม่เปิดเผยแก่บุคคลภายนอก
@@ -35,7 +35,7 @@ export default function ConsentDialog({ onDone }: { onDone: () => void }) {
           <input type="checkbox" className="mt-1 h-4 w-4" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
           <span>
             ข้าพเจ้าได้อ่านและยอมรับ{" "}
-            <Link href="/privacy" target="_blank" className="text-brand-600 underline">นโยบายความเป็นส่วนตัว</Link>{" "}
+            <Link href="/privacy" target="_blank" className="link">นโยบายความเป็นส่วนตัว</Link>{" "}
             (ฉบับที่ {PDPA_VERSION})
           </span>
         </label>

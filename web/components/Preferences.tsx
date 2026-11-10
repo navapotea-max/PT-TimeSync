@@ -115,9 +115,14 @@ export function PrivacyToggle() {
   const { enabled, toggle } = usePrivacy();
   return (
     <button type="button" onClick={toggle} aria-pressed={enabled}
-      title={enabled ? "ปิดโหมดความเป็นส่วนตัว (แสดงชื่อเต็ม)" : "เปิดโหมดความเป็นส่วนตัว (ปิดบังชื่อและอีเมล)"}
-      className={`btn ${enabled ? "bg-emerald-600 text-white hover:bg-emerald-700" : "btn-secondary"}`}>
-      {enabled ? "🛡️ PDPA: เปิด" : "🛡️ PDPA"}
+      title={enabled ? "ปิดโหมดซ่อนข้อมูลส่วนบุคคล (แสดงชื่อเต็ม)" : "เปิดโหมดซ่อนข้อมูลส่วนบุคคล (อำพรางชื่อและอีเมล)"}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${enabled
+        ? "border-brand-600 bg-brand-600 text-white hover:bg-brand-700"
+        : "border-slate-200/90 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"}`}>
+      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+      {enabled ? "PDPA: เปิด" : "PDPA"}
     </button>
   );
 }

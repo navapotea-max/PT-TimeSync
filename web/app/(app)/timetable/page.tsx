@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { IconDownload, IconLock, IconPrinter, IconX } from "@/components/Icons";
 import Logo from "@/components/Logo";
-import TimetableGrid, { toSessions, type Session, type ViewMode } from "@/components/TimetableGrid";
+import TimetableGrid, { DAY_DOT, toSessions, type Session, type ViewMode } from "@/components/TimetableGrid";
 import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
 import { conflictsForMove, findConflicts } from "@/lib/conflicts";
@@ -11,7 +12,8 @@ import { buildWorkbook, type SheetSpec } from "@/lib/exportExcel";
 import { createClient } from "@/lib/supabase/client";
 import type { Room, ScheduleRow, Semester, StudentGroup, Teacher } from "@/lib/types";
 
-const MODE_LABEL: Record<ViewMode, string> = { group: "ตารางเรียน (กลุ่ม)", teacher: "ตารางสอน (ครู)", room: "ตารางการใช้ห้อง" };
+const MODE_LABEL: Record<ViewMode, string> = { group: "ตารางเรียน (กลุ่มเรียน)", teacher: "ตารางสอน (ครูผู้สอน)", room: "ตารางการใช้ห้องเรียน" };
+const MODE_TAB: Record<ViewMode, string> = { group: "กลุ่มเรียน", teacher: "ครูผู้สอน", room: "ห้องเรียน" };
 
 export default function TimetablePage() {
   const supabase = createClient();
@@ -100,17 +102,20 @@ export default function TimetablePage() {
   }), [rows]);
 
   const summary = useMemo(() => {
-    const m = new Map<string, { code: string; name: string; who: string; hours: number }>();
+    const m = new Map<string, { code: string; name: string; who: string; rooms: Set<string>; hours: number; blocks: number }>();
     viewSessions.forEach((s) => {
       const r = s.rows[0];
       const who = mode === "group" ? privacy.name(r.teacher_name) : Array.from(new Set(s.rows.map((x) => x.group_code))).join(", ");
       const k = `${r.subject_code}|${who}`;
-      const e = m.get(k) ?? { code: r.subject_code, name: r.subject_name, who, hours: 0 };
+      const e = m.get(k) ?? { code: r.subject_code, name: r.subject_name, who, rooms: new Set<string>(), hours: 0, blocks: 0 };
       e.hours += s.end - s.start + 1;
+      e.blocks += 1;
+      if (r.room_code) e.rooms.add(r.room_code);
       m.set(k, e);
     });
     return Array.from(m.values()).sort((a, b) => a.code.localeCompare(b.code));
   }, [viewSessions, mode, privacy]);
+  const totalHours = summary.reduce((a, s) => a + s.hours, 0);
 
   // ---------- actions ----------
   async function updateSession(key: string, patch: Partial<ScheduleRow>) {
@@ -206,120 +211,179 @@ export default function TimetablePage() {
 
   const selRow = selected?.rows[0];
   const target = targets.find((t) => t.id === targetId);
+  const whoHeader = mode === "group" ? "ครูผู้สอน" : "กลุ่มเรียน";
 
   return (
-    <div className="space-y-4">
-      <div className="no-print flex flex-wrap items-end gap-3">
+    <div className="space-y-5">
+      {/* ---------- ตัวกรอง ---------- */}
+      <div className="no-print card flex flex-wrap items-end gap-4 p-4">
         <div>
           <label className="label">ภาคเรียน</label>
-          <select className="input w-36" value={semesterId} onChange={(e) => setSemesterId(e.target.value)}>
+          <select className="input w-32" value={semesterId} onChange={(e) => setSemesterId(e.target.value)}>
             {semesters.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="label">มุมมอง</label>
-          <select className="input w-48" value={mode} onChange={(e) => { setMode(e.target.value as ViewMode); setSelected(null); }}>
-            {(Object.keys(MODE_LABEL) as ViewMode[]).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
-          </select>
+          <label className="label">มุมมองตาราง</label>
+          <div className="seg">
+            {(Object.keys(MODE_TAB) as ViewMode[]).map((m) => (
+              <button key={m} type="button" onClick={() => { setMode(m); setSelected(null); }}
+                className={`seg-btn ${mode === m ? "seg-btn-active" : ""}`}>{MODE_TAB[m]}</button>
+            ))}
+          </div>
         </div>
-        <div className="min-w-[260px] flex-1">
-          <label className="label">เลือก</label>
+        <div className="min-w-[240px] flex-1">
+          <label className="label">เลือกรายการ</label>
           <select className="input" value={targetId} onChange={(e) => { setTargetId(e.target.value); setSelected(null); }}>
             {targets.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="btn-secondary" disabled={busy} onClick={() => exportExcel(false)}>ส่งออก Excel</button>
-          <button className="btn-secondary" disabled={busy} onClick={() => exportExcel(true)}>Excel ทุก{mode === "group" ? "กลุ่ม" : mode === "teacher" ? "ครู" : "ห้อง"}</button>
-          <button className="btn-secondary" onClick={() => window.print()}>พิมพ์ / PDF</button>
+          <button className="btn-secondary" disabled={busy} onClick={() => exportExcel(false)}>
+            <IconDownload className="h-3.5 w-3.5" />ส่งออก Excel
+          </button>
+          <button className="btn-secondary" disabled={busy} onClick={() => exportExcel(true)}>
+            Excel ทุก{MODE_TAB[mode]}
+          </button>
+          <button className="btn-secondary" onClick={() => window.print()}>
+            <IconPrinter className="h-3.5 w-3.5" />พิมพ์ / PDF
+          </button>
         </div>
       </div>
 
+      {/* ---------- แถบสถานะ (ผู้ดูแลระบบ) ---------- */}
       {isAdmin && (
-        <div className="no-print card flex flex-wrap items-center gap-3 text-sm">
-          <span>ฉบับร่าง <b>{stats.draft}</b> | เผยแพร่แล้ว <b>{stats.published}</b></span>
-          <span className={conflicts.length ? "font-semibold text-red-600" : "text-green-700"}>
-            {conflicts.length ? `⚠ พบการชนกัน ${conflicts.length} จุด` : "✓ ไม่มีการชนกัน"}
+        <div className="no-print card flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 text-xs">
+          <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />ฉบับร่าง <b className="font-mono">{stats.draft}</b>
           </span>
-          <span className="text-slate-500">ลากการ์ดวิชาไปวางช่องอื่นเพื่อย้าย (คาบที่ย้ายด้วยมือจะถูกล็อกอัตโนมัติ)</span>
+          <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <span className="h-2 w-2 rounded-full bg-brand-500" />เผยแพร่แล้ว <b className="font-mono">{stats.published}</b>
+          </span>
+          <span className="hidden h-4 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
+          {conflicts.length
+            ? <span className="chip-red">พบคาบชนกัน {conflicts.length} จุด</span>
+            : <span className="chip-green">ไม่พบคาบเรียนชนกัน</span>}
+          <span className="text-slate-400">• ลากการ์ดวิชาไปวางในช่องว่างเพื่อย้ายคาบ หรือคลิกที่การ์ดเพื่อเปลี่ยนห้องเรียนและล็อกตำแหน่ง</span>
           <div className="ml-auto flex gap-2">
-            <button className="btn-secondary" disabled={busy} onClick={() => setStatus("draft")}>ยกเลิกเผยแพร่</button>
-            <button className="btn-primary" disabled={busy || rows.length === 0} onClick={() => setStatus("published")}>เผยแพร่ตาราง</button>
+            <button className="btn-secondary btn-sm" disabled={busy} onClick={() => setStatus("draft")}>เปลี่ยนเป็นฉบับร่าง</button>
+            <button className="btn-primary btn-sm" disabled={busy || rows.length === 0} onClick={() => setStatus("published")}>เผยแพร่ตารางเรียน</button>
           </div>
         </div>
       )}
-      {notice && <div className="no-print rounded bg-brand-50 p-2 text-sm text-brand-900">{notice}</div>}
+      {notice && (
+        <div className="no-print flex items-center justify-between rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm text-brand-800 dark:border-brand-800 dark:bg-brand-500/10 dark:text-brand-200">
+          <span>{notice}</span>
+          <button onClick={() => setNotice(null)} aria-label="ปิด"><IconX className="h-3.5 w-3.5" /></button>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-4 xl:flex-row">
+      <div className="flex flex-col gap-5 xl:flex-row">
+        {/* ---------- ตาราง ---------- */}
         <div className="card print-area min-w-0 flex-1">
-          <div className="mb-3 flex items-center justify-center gap-3 text-center">
-            <Logo size={56} />
-            <div>
-            <h2 className="text-lg font-bold">วิทยาลัยการอาชีพโพนทอง — {MODE_LABEL[mode]}</h2>
-            <p className="text-sm text-slate-600">{target?.label} | ภาคเรียนที่ {semester?.name}</p>
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Logo size={48} className="ring-1 ring-slate-200 dark:ring-slate-700" />
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">วิทยาลัยการอาชีพโพนทอง — {MODE_LABEL[mode]}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{target?.label} · ภาคเรียนที่ {semester?.name}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">รวม <span className="font-mono">{totalHours}</span> คาบ/สัปดาห์</p>
+              <p className="text-[11px] text-slate-400">{viewSessions.length} ก้อนคาบเรียน</p>
             </div>
           </div>
+
           {rows.length === 0 ? (
-            <p className="p-8 text-center text-slate-400">
-              {isAdmin ? "ยังไม่มีตาราง — ไปที่เมนู “จัดตารางอัตโนมัติ (AI)”" : "ยังไม่มีตารางที่เผยแพร่"}
-            </p>
+            <div className="rounded-xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-400 dark:border-slate-700">
+              {isAdmin ? "ยังไม่มีตาราง — ไปที่เมนู “ประมวลผลจัดตารางสอน”" : "ยังไม่มีตารางที่เผยแพร่"}
+            </div>
           ) : (
             <TimetableGrid config={config} sessions={viewSessions} mode={mode} editable={isAdmin && !busy}
               conflictKeys={conflictKeys} selectedKey={selected?.key ?? null} onSelect={setSelected} onDrop={handleDrop} />
           )}
+
           {summary.length > 0 && (
-            <table className="mt-4 w-full text-sm">
-              <thead><tr><th className="th">รหัสวิชา</th><th className="th">ชื่อวิชา</th><th className="th">{mode === "group" ? "ครูผู้สอน" : "กลุ่มเรียน"}</th><th className="th text-right">คาบ/สัปดาห์</th></tr></thead>
-              <tbody>
-                {summary.map((s) => (
-                  <tr key={s.code + s.who}><td className="td">{s.code}</td><td className="td">{s.name}</td><td className="td">{s.who}</td><td className="td text-right">{s.hours}</td></tr>
-                ))}
-                <tr><td className="td font-semibold" colSpan={3}>รวม</td><td className="td text-right font-semibold">{summary.reduce((a, s) => a + s.hours, 0)}</td></tr>
-              </tbody>
-            </table>
+            <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="th">รหัสวิชา</th><th className="th">ชื่อรายวิชา</th><th className="th">{whoHeader}</th>
+                    {mode !== "room" && <th className="th">ห้องเรียน</th>}
+                    <th className="th text-right">จำนวนคาบ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.map((s) => (
+                    <tr key={s.code + s.who}>
+                      <td className="td font-mono text-xs font-semibold text-slate-900 dark:text-white">{s.code}</td>
+                      <td className="td">{s.name}</td>
+                      <td className="td text-slate-500 dark:text-slate-400">{s.who}</td>
+                      {mode !== "room" && <td className="td font-mono text-xs text-slate-500 dark:text-slate-400">{Array.from(s.rooms).join(", ") || "-"}</td>}
+                      <td className="td text-right font-mono tabular-nums">{s.hours}</td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td className="td font-semibold text-slate-900 dark:text-white" colSpan={mode !== "room" ? 4 : 3}>รวมจำนวนคาบทั้งหมด</td>
+                    <td className="td text-right font-mono font-semibold tabular-nums text-slate-900 dark:text-white">{totalHours}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
+        {/* ---------- แผงรายละเอียด ---------- */}
         {(selected || (isAdmin && conflicts.length > 0)) && (
           <div className="no-print w-full space-y-4 xl:w-80">
             {selected && selRow && (
-              <div className="card space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <h3 className="font-semibold">{selRow.subject_code}</h3>
-                  <button onClick={() => setSelected(null)}>✕</button>
+              <div className="card space-y-3 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-mono text-xs font-semibold text-brand-600 dark:text-brand-400">{selRow.subject_code}</p>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">{selRow.subject_name}</h3>
+                  </div>
+                  <button className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" onClick={() => setSelected(null)} aria-label="ปิด">
+                    <IconX />
+                  </button>
                 </div>
-                <p>{selRow.subject_name}</p>
-                <p>ครู: {privacy.name(selRow.teacher_name)}</p>
-                <p>กลุ่ม: {Array.from(new Set(selected.rows.map((r) => r.group_code))).join(", ")}</p>
-                <p>เวลา: {DAY_NAMES[selected.day]} คาบ {selected.start}-{selected.end}</p>
-                <p>ต้องการห้อง: {roomTypeLabel(selRow.required_room_type)}</p>
+                <dl className="space-y-1.5 text-xs">
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">ครูผู้สอน</dt><dd className="text-right text-slate-700 dark:text-slate-200">{privacy.name(selRow.teacher_name)}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">กลุ่มเรียน</dt><dd className="text-right text-slate-700 dark:text-slate-200">{Array.from(new Set(selected.rows.map((r) => r.group_code))).join(", ")}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">เวลา</dt><dd className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200"><span className={`h-2 w-2 rounded-full ${DAY_DOT[selected.day]}`} />{DAY_NAMES[selected.day]} คาบ {selected.start}–{selected.end}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">ประเภทห้องที่ต้องใช้</dt><dd className="text-right text-slate-700 dark:text-slate-200">{roomTypeLabel(selRow.required_room_type)}</dd></div>
+                  <div className="flex justify-between gap-2"><dt className="text-slate-400">สถานะ</dt><dd>{selRow.status === "published" ? <span className="chip-green">เผยแพร่แล้ว</span> : <span className="chip-amber">ฉบับร่าง</span>}</dd></div>
+                </dl>
                 {isAdmin ? (
                   <>
-                    <label className="label mt-2">ห้องเรียน</label>
-                    <select className="input" value={selRow.room_id ?? ""} disabled={busy} onChange={(e) => changeRoom(selected, e.target.value)}>
-                      <option value="">— ไม่ระบุ —</option>
-                      {[...rooms].sort((a, b) => Number(b.room_type === selRow.required_room_type) - Number(a.room_type === selRow.required_room_type))
-                        .map((r) => <option key={r.id} value={r.id}>{r.room_code} {r.room_name} ({r.capacity}){r.room_type === selRow.required_room_type ? " ✓" : ""}</option>)}
-                    </select>
-                    <div className="flex gap-2 pt-2">
+                    <div>
+                      <label className="label">ห้องเรียน</label>
+                      <select className="input" value={selRow.room_id ?? ""} disabled={busy} onChange={(e) => changeRoom(selected, e.target.value)}>
+                        <option value="">— ไม่ระบุ —</option>
+                        {[...rooms].sort((a, b) => Number(b.room_type === selRow.required_room_type) - Number(a.room_type === selRow.required_room_type))
+                          .map((r) => <option key={r.id} value={r.id}>{r.room_code} {r.room_name} ({r.capacity}){r.room_type === selRow.required_room_type ? " ✓" : ""}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
                       <button className="btn-secondary flex-1" disabled={busy}
                         onClick={async () => { await updateSession(selected.key, { is_locked: !selRow.is_locked }); setSelected(null); }}>
-                        {selRow.is_locked ? "ปลดล็อก" : "ล็อกคาบนี้"}
+                        <IconLock className="h-3.5 w-3.5" />{selRow.is_locked ? "ปลดล็อก" : "ล็อกตำแหน่ง"}
                       </button>
-                      <button className="btn-danger" disabled={busy} onClick={() => deleteSession(selected)}>ลบ</button>
+                      <button className="btn-danger" disabled={busy} onClick={() => deleteSession(selected)}>ลบคาบ</button>
                     </div>
                   </>
                 ) : (
-                  <p>ห้อง: {selRow.room_code} {selRow.room_name}</p>
+                  <p className="text-xs text-slate-500">ห้อง: <span className="font-mono">{selRow.room_code}</span> {selRow.room_name}</p>
                 )}
               </div>
             )}
             {isAdmin && conflicts.length > 0 && (
               <div className="card max-h-96 overflow-y-auto text-sm">
-                <h3 className="mb-2 font-semibold text-red-600">รายการชนกัน</h3>
-                <ul className="space-y-1">
+                <h3 className="mb-2 text-sm font-semibold text-red-600 dark:text-red-400">รายการคาบชนกัน</h3>
+                <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                   {conflicts.slice(0, 100).map((c, i) => (
-                    <li key={i}>• {c.label} — {DAY_NAMES[c.day]} คาบ {c.period}</li>
+                    <li key={i} className="flex gap-1.5"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />{c.label} — {DAY_NAMES[c.day]} คาบ {c.period}</li>
                   ))}
                 </ul>
               </div>

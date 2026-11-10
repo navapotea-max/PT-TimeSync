@@ -61,19 +61,19 @@ export default function PrivacyPage() {
       <div className="card flex items-center gap-4">
         <Logo size={72} />
         <div>
-        <h1 className="text-2xl font-bold">นโยบายความเป็นส่วนตัว (Privacy Notice)</h1>
+        <h1 className="page-title">นโยบายความเป็นส่วนตัว (Privacy Notice)</h1>
         <p className="text-sm text-slate-500">
           ระบบจัดตารางเรียน-ตารางสอน {ORG.name} · ฉบับที่ {PDPA_VERSION}
         </p>
         </div>
       </div>
       {SECTIONS.map((s) => (
-        <section key={s.title} className="card text-sm leading-relaxed">
-          <h2 className="mb-2 text-base font-semibold">{s.title}</h2>
+        <section key={s.title} className="card text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+          <h2 className="mb-2 text-sm font-semibold text-slate-900 dark:text-white">{s.title}</h2>
           {s.body}
         </section>
       ))}
-      <p className="text-center text-sm"><Link href="/" className="text-brand-600 underline">กลับสู่ระบบ</Link></p>
+      <p className="text-center text-sm"><Link href="/" className="link">← กลับสู่ระบบ</Link></p>
     </div>
   );
 }

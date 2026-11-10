@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
 import { PDPA_VERSION, REQUEST_STATUS, REQUEST_TYPES } from "@/lib/pdpa";
@@ -103,41 +104,40 @@ export default function PdpaPage() {
   const pending = all.filter((r) => r.status === "pending" || r.status === "in_progress").length;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">PDPA / ข้อมูลส่วนบุคคล</h1>
-        <p className="text-sm text-slate-500">ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · <Link href="/privacy" className="text-brand-600 underline">อ่านนโยบายความเป็นส่วนตัว</Link></p>
-      </div>
-      {msg && <div className="rounded bg-brand-50 p-2 text-sm text-brand-900">{msg}</div>}
+    <div className="space-y-5">
+      <PageHeader title="การคุ้มครองข้อมูลส่วนบุคคล (PDPA)"
+        subtitle={<>ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 · วิทยาลัยการอาชีพโพนทอง · <Link href="/privacy" className="link">อ่านนโยบายความเป็นส่วนตัว</Link></>} />
+      {msg && <div className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm text-brand-800 dark:border-brand-800 dark:bg-brand-500/10 dark:text-brand-200">{msg}</div>}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="card space-y-2 text-sm">
-          <h2 className="font-semibold">ข้อมูลของฉัน</h2>
-          <p>ชื่อ: {privacy.name(profile.full_name)}</p>
-          <p>อีเมล: {privacy.email(profile.email)}</p>
-          <p>สิทธิ์: {ROLE_TH[profile.role]}</p>
-          <p>
-            ความยินยอม:{" "}
-            {profile.pdpa_consent_at
-              ? <span className="text-green-700">ยินยอมแล้ว เมื่อ {new Date(profile.pdpa_consent_at).toLocaleString("th-TH")} (ฉบับที่ {profile.pdpa_consent_version ?? PDPA_VERSION})</span>
-              : <span className="text-amber-800">ยังไม่ได้ยินยอม</span>}
-          </p>
+        <div className="card space-y-3 text-sm">
+          <h2 className="card-title">ข้อมูลบัญชีของฉัน</h2>
+          <dl className="space-y-2 text-xs">
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">ชื่อ-นามสกุล</dt><dd className="text-right font-medium text-slate-900 dark:text-white">{privacy.name(profile.full_name)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">อีเมล</dt><dd className="text-right font-mono text-slate-900 dark:text-white">{privacy.email(profile.email)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">สิทธิ์การใช้งาน</dt><dd className="text-right text-slate-900 dark:text-white">{ROLE_TH[profile.role]}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">ความยินยอม PDPA</dt><dd className="text-right">
+              {profile.pdpa_consent_at
+                ? <span className="font-medium text-emerald-700 dark:text-emerald-400">ยินยอมเมื่อ {new Date(profile.pdpa_consent_at).toLocaleDateString("th-TH")} (v{profile.pdpa_consent_version ?? PDPA_VERSION})</span>
+                : <span className="text-amber-700">ยังไม่ได้ยินยอม</span>}
+            </dd></div>
+          </dl>
           <div className="flex flex-wrap gap-2 pt-2">
-            <button className="btn-primary" onClick={exportMyData}>⬇ ดาวน์โหลดข้อมูลของฉัน (JSON)</button>
+            <button className="btn-primary" onClick={exportMyData}>ดาวน์โหลดสำเนาข้อมูลของฉัน (.json)</button>
             {profile.pdpa_consent_at && <button className="btn-secondary" onClick={withdraw}>ถอนความยินยอม</button>}
           </div>
         </div>
 
         <div className="card space-y-3 text-sm">
-          <h2 className="font-semibold">ยื่นคำร้องเกี่ยวกับข้อมูลส่วนบุคคล</h2>
+          <h2 className="card-title">ยื่นคำร้องใช้สิทธิเจ้าของข้อมูล</h2>
           <div>
-            <label className="label">ประเภทคำร้อง</label>
+            <label className="label">เรื่องที่ต้องการยื่นคำร้อง</label>
             <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
               {Object.entries(REQUEST_TYPES).filter(([k]) => k !== "withdraw_consent").map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </div>
           <div>
-            <label className="label">รายละเอียด</label>
+            <label className="label">รายละเอียดเพิ่มเติม</label>
             <textarea className="input" rows={3} value={detail} onChange={(e) => setDetail(e.target.value)}
               placeholder="เช่น ขอแก้ไขชื่อ-สกุล เป็น ..." />
           </div>
@@ -146,7 +146,7 @@ export default function PdpaPage() {
       </div>
 
       <div className="card overflow-x-auto p-0">
-        <h2 className="p-4 font-semibold">คำร้องของฉัน</h2>
+        <h2 className="card-title px-5 py-4">คำร้องของฉัน</h2>
         <table className="w-full">
           <thead><tr><th className="th">วันที่</th><th className="th">ประเภท</th><th className="th">รายละเอียด</th><th className="th">สถานะ</th><th className="th">หมายเหตุจากผู้ดูแล</th></tr></thead>
           <tbody>
@@ -155,7 +155,7 @@ export default function PdpaPage() {
                 <td className="td">{new Date(r.created_at).toLocaleDateString("th-TH")}</td>
                 <td className="td">{REQUEST_TYPES[r.request_type]}</td>
                 <td className="td">{r.detail}</td>
-                <td className="td"><span className={`rounded px-2 py-0.5 text-xs ${REQUEST_STATUS[r.status]?.cls}`}>{REQUEST_STATUS[r.status]?.label}</span></td>
+                <td className="td"><span className={REQUEST_STATUS[r.status]?.cls}>{REQUEST_STATUS[r.status]?.label}</span></td>
                 <td className="td">{r.admin_note}</td>
               </tr>
             ))}
@@ -166,11 +166,11 @@ export default function PdpaPage() {
 
       {isAdmin && (
         <div className="card overflow-x-auto p-0">
-          <div className="flex items-center gap-2 p-4">
-            <h2 className="font-semibold">คำร้องทั้งหมด (ผู้ดูแลระบบ)</h2>
-            {pending > 0 && <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">รอดำเนินการ {pending}</span>}
+          <div className="flex items-center gap-2 px-5 py-4">
+            <h2 className="card-title">ประวัติคำร้องในระบบ (ผู้ดูแลระบบ)</h2>
+            {pending > 0 && <span className="chip-amber">รอดำเนินการ {pending}</span>}
           </div>
-          <p className="px-4 pb-3 text-xs text-slate-500">
+          <p className="px-5 pb-3 text-xs text-slate-500">
             คำร้องขอลบบัญชี: ลบผู้ใช้ที่ Supabase → Authentication → Users (ข้อมูล profile จะถูกลบตามอัตโนมัติ) และลบ/แก้ข้อมูลครูที่เมนูครูผู้สอน แล้วกด “เสร็จสิ้น”
           </p>
           <table className="w-full">
@@ -179,7 +179,7 @@ export default function PdpaPage() {
               {all.map((r) => (
                 <tr key={r.id}>
                   <td className="td whitespace-nowrap">{new Date(r.created_at).toLocaleString("th-TH")}</td>
-                  <td className="td">{privacy.email(r.email)}</td>
+                  <td className="td font-mono text-xs">{privacy.email(r.email)}</td>
                   <td className="td">{REQUEST_TYPES[r.request_type]}</td>
                   <td className="td">{r.detail}</td>
                   <td className="td">

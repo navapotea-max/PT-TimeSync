@@ -2,6 +2,8 @@
 
 import Papa from "papaparse";
 import { useMemo, useState } from "react";
+import DataTabs from "@/components/DataTabs";
+import PageHeader from "@/components/PageHeader";
 import { AdminOnly } from "@/components/ProfileProvider";
 import { coerce, ENTITIES, IMPORTABLE, type Entity } from "@/lib/entities";
 import { createClient } from "@/lib/supabase/client";
@@ -18,10 +20,10 @@ interface Checked {
 }
 
 const STATUS_LABEL: Record<Status, { text: string; cls: string }> = {
-  new: { text: "ใหม่", cls: "bg-green-100 text-green-800" },
-  duplicate: { text: "มีในระบบแล้ว", cls: "bg-amber-100 text-amber-800" },
-  "file-duplicate": { text: "ซ้ำในไฟล์", cls: "bg-orange-100 text-orange-800" },
-  error: { text: "ผิดพลาด", cls: "bg-red-100 text-red-800" },
+  new: { text: "ใหม่", cls: "chip-green" },
+  duplicate: { text: "มีในระบบแล้ว", cls: "chip-amber" },
+  "file-duplicate": { text: "ซ้ำในไฟล์", cls: "chip-blue" },
+  error: { text: "ผิดพลาด", cls: "chip-red" },
 };
 
 async function readFile(file: File): Promise<RawRow[]> {
@@ -194,22 +196,24 @@ export default function ImportPage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">นำเข้าข้อมูล (CSV / Excel)</h1>
-        <div className="card grid gap-4 md:grid-cols-3">
+      <div className="space-y-5">
+        <DataTabs />
+        <PageHeader title="นำเข้าไฟล์ CSV / Excel"
+          subtitle="ระบบตรวจสอบข้อมูลซ้ำและความถูกต้องก่อนบันทึก (Pre-check) และเก็บไฟล์ต้นฉบับไว้ใน Storage" />
+        <div className="card grid gap-5 md:grid-cols-3">
           <div>
             <label className="label">1. เลือกประเภทข้อมูล</label>
             <select className="input" value={entityKey}
               onChange={(e) => { setEntityKey(e.target.value); setChecked([]); setFile(null); }}>
               {IMPORTABLE.map((k) => <option key={k} value={k}>{ENTITIES[k].title}</option>)}
             </select>
-            <button className="mt-2 text-sm text-brand-600 underline" onClick={downloadTemplate}>ดาวน์โหลดไฟล์ตัวอย่าง (.csv)</button>
+            <button className="link mt-2 text-xs" onClick={downloadTemplate}>ดาวน์โหลดไฟล์ตัวอย่าง (.csv) →</button>
           </div>
           <div>
             <label className="label">2. เลือกไฟล์ (.csv, .xlsx)</label>
             <input type="file" accept=".csv,.xlsx" className="input"
               onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f) precheck(f); }} />
-            <p className="mt-1 text-xs text-slate-500">หัวคอลัมน์: <code>{entity.importColumns.join(", ")}</code></p>
+            <p className="mt-1.5 text-xs text-slate-500">หัวคอลัมน์: <code className="font-mono text-[11px]">{entity.importColumns.join(", ")}</code></p>
           </div>
           <div>
             <label className="label">3. รายการที่มีอยู่แล้ว</label>
@@ -221,21 +225,21 @@ export default function ImportPage() {
         </div>
 
         {log.length > 0 && (
-          <div className="card space-y-1 text-sm">{log.map((l, i) => <p key={i}>• {l}</p>)}</div>
+          <div className="card space-y-1 text-sm text-slate-700 dark:text-slate-300">{log.map((l, i) => <p key={i}>• {l}</p>)}</div>
         )}
 
         {checked.length > 0 && (
           <div className="card space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <b>ผลการตรวจสอบ (Pre-check):</b>
+              <b className="text-slate-900 dark:text-white">ผลการตรวจสอบ (Pre-check):</b>
               {(Object.keys(summary) as Status[]).map((s) => (
-                <span key={s} className={`rounded px-2 py-0.5 ${STATUS_LABEL[s].cls}`}>{STATUS_LABEL[s].text} {summary[s]}</span>
+                <span key={s} className={STATUS_LABEL[s].cls}>{STATUS_LABEL[s].text} {summary[s]}</span>
               ))}
               <button className="btn-primary ml-auto" disabled={busy || importable === 0} onClick={doImport}>
                 {busy ? "กำลังนำเข้า..." : `นำเข้า ${importable} รายการ`}
               </button>
             </div>
-            <div className="max-h-[60vh] overflow-auto">
+            <div className="max-h-[60vh] overflow-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
               <table className="w-full">
                 <thead className="sticky top-0">
                   <tr>
@@ -248,7 +252,7 @@ export default function ImportPage() {
                   {checked.map((c) => (
                     <tr key={c.line}>
                       <td className="td">{c.line}</td>
-                      <td className="td"><span className={`rounded px-2 py-0.5 text-xs ${STATUS_LABEL[c.status].cls}`}>{STATUS_LABEL[c.status].text}</span></td>
+                      <td className="td"><span className={STATUS_LABEL[c.status].cls}>{STATUS_LABEL[c.status].text}</span></td>
                       {entity.importColumns.map((col) => <td key={col} className="td">{c.raw[col]}</td>)}
                       <td className="td text-xs text-red-600">{c.errors.join("; ")}</td>
                     </tr>

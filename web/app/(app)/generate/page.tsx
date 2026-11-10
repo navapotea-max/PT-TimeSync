@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { AdminOnly } from "@/components/ProfileProvider";
 import { ENGINE_URL } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { ScheduleJob, Semester } from "@/lib/types";
 
 const STATUS_TH: Record<ScheduleJob["status"], string> = {
-  queued: "อยู่ในคิว", running: "กำลังคำนวณ", succeeded: "สำเร็จ", failed: "ไม่สำเร็จ",
+  queued: "อยู่ในคิว", running: "กำลังประมวลผล", succeeded: "เสร็จสมบูรณ์", failed: "ไม่สำเร็จ",
+};
+const STATUS_CHIP: Record<ScheduleJob["status"], string> = {
+  queued: "chip-gray", running: "chip-blue", succeeded: "chip-green", failed: "chip-red",
 };
 
 export default function GeneratePage() {
@@ -26,7 +30,8 @@ export default function GeneratePage() {
       .order("created_at", { ascending: false }).limit(10);
     setJobs(data ?? []);
     const running = (data ?? []).find((j: ScheduleJob) => j.status === "queued" || j.status === "running");
-    if (running) setCurrent(running);
+    // แสดงงานที่กำลังทำ หรือผลของงานล่าสุด
+    setCurrent((prev) => running ?? (prev && prev.semester_id === sid ? prev : data?.[0] ?? null));
     const { count } = await supabase.from("schedules").select("id", { count: "exact", head: true })
       .eq("semester_id", sid).eq("is_locked", true);
     setLockedCount(count ?? 0);
@@ -95,76 +100,84 @@ export default function GeneratePage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">จัดตารางอัตโนมัติ (AI Scheduling Engine)</h1>
+      <div className="space-y-5">
+        <PageHeader title="ประมวลผลจัดตารางสอนอัตโนมัติ"
+          subtitle="ระบบคำนวณการจัดวางคาบเรียนตามภาระงานสอน ประเภทห้องเรียน และเวลาที่ครูสะดวกโดยไม่ให้เกิดการชนกัน" />
 
-        <div className="card grid gap-4 md:grid-cols-4 md:items-end">
+        <div className="card grid gap-4 md:grid-cols-2 md:items-end xl:grid-cols-4">
           <div>
-            <label className="label">ภาคเรียน</label>
+            <label className="label">ภาคเรียนที่ต้องการจัด</label>
             <select className="input" value={semesterId} onChange={(e) => setSemesterId(e.target.value)}>
               {semesters.map((s) => <option key={s.id} value={s.id}>{s.name}{s.is_active ? " (ปัจจุบัน)" : ""}</option>)}
             </select>
           </div>
           <div>
-            <label className="label">เวลาคำนวณสูงสุด (วินาที)</label>
-            <input type="number" className="input" min={5} max={600} value={timeLimit}
+            <label className="label">เวลาประมวลผลสูงสุด (วินาที)</label>
+            <input type="number" className="input font-mono" min={5} max={600} value={timeLimit}
               onChange={(e) => setTimeLimit(Number(e.target.value))} />
           </div>
-          <div className="text-sm text-slate-500">คาบที่ล็อกไว้ (จะไม่ถูกย้าย): <b>{lockedCount}</b></div>
-          <button className="btn-primary" disabled={!semesterId || !!running} onClick={start}>
-            {running ? "กำลังคำนวณ..." : "▶ เริ่มจัดตาราง"}
+          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+            คาบที่ล็อกตำแหน่งไว้ (ไม่ถูกย้าย): <b className="font-mono text-slate-900 dark:text-white">{lockedCount}</b> คาบ
+          </div>
+          <button className="btn-primary py-2.5" disabled={!semesterId || !!running} onClick={start}>
+            {running ? "กำลังประมวลผล..." : "เริ่มคำนวณตารางสอน"}
           </button>
         </div>
 
-        {error && <div className="card border-red-300 bg-red-50 text-sm text-red-700">{error}</div>}
+        {error && <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/30">{error}</div>}
 
         {current && (
           <div className="card space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span><b>{STATUS_TH[current.status]}</b> — {current.message}</span>
-              <span className="font-mono">{current.progress}%</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <span className="flex items-center gap-2">
+                <span className={STATUS_CHIP[current.status]}>{STATUS_TH[current.status]}</span>
+                <span className="text-xs text-slate-600 dark:text-slate-300">{current.message}</span>
+              </span>
+              <span className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">{current.progress}%</span>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className={`h-full transition-all duration-500 ${current.status === "failed" ? "bg-red-500" : current.status === "succeeded" ? "bg-green-500" : "bg-brand-500"}`}
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div className={`h-full rounded-full transition-all duration-500 ${current.status === "failed" ? "bg-red-500" : "bg-brand-600 dark:bg-brand-500"} ${running ? "animate-pulse" : ""}`}
                 style={{ width: `${current.progress}%` }} />
             </div>
             {current.status === "succeeded" && (
-              <p className="text-sm text-green-700">
-                จัดได้ {result?.blocks} ก้อนคาบเรียน ใช้เวลา {result?.wall_time} วินาที —{" "}
-                <Link href="/timetable" className="underline">ดูตาราง</Link>
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-xs text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
+                <span>จัดตารางสำเร็จ {result?.blocks} ก้อนคาบเรียน (ใช้เวลา {result?.wall_time} วินาที)</span>
+                <Link href="/timetable" className="font-semibold underline">เปิดดูตารางเรียนที่จัดเสร็จแล้ว →</Link>
+              </div>
             )}
             {result?.errors && result.errors.length > 0 && (
-              <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-                <p className="font-semibold">ปัญหาที่พบ:</p>
-                <ul className="list-disc pl-5">{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-700 dark:bg-red-500/10 dark:text-red-300">
+                <p className="mb-1 font-semibold">ปัญหาที่พบ</p>
+                <ul className="list-disc space-y-0.5 pl-5">{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul>
               </div>
             )}
             {result?.warnings && result.warnings.length > 0 && (
-              <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-                <p className="font-semibold">คำเตือน:</p>
-                <ul className="list-disc pl-5">{result.warnings.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              <div className="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+                <p className="mb-1 font-semibold">คำเตือน</p>
+                <ul className="list-disc space-y-0.5 pl-5">{result.warnings.map((e, i) => <li key={i}>{e}</li>)}</ul>
               </div>
             )}
           </div>
         )}
 
-        <div className="card p-0">
-          <h2 className="p-4 font-semibold">ประวัติการจัดตาราง</h2>
-          <table className="w-full">
-            <thead><tr><th className="th">เวลา</th><th className="th">สถานะ</th><th className="th">ความคืบหน้า</th><th className="th">ข้อความ</th></tr></thead>
-            <tbody>
-              {jobs.map((j) => (
-                <tr key={j.id}>
-                  <td className="td">{new Date(j.created_at).toLocaleString("th-TH")}</td>
-                  <td className="td">{STATUS_TH[j.status]}</td>
-                  <td className="td">{j.progress}%</td>
-                  <td className="td text-xs">{j.message}</td>
-                </tr>
-              ))}
-              {jobs.length === 0 && <tr><td className="td text-center text-slate-400" colSpan={4}>ยังไม่มีประวัติ</td></tr>}
-            </tbody>
-          </table>
+        <div className="card overflow-hidden p-0">
+          <h2 className="card-title px-5 py-4">ประวัติการประมวลผล</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead><tr><th className="th">วันและเวลา</th><th className="th">สถานะ</th><th className="th">ความคืบหน้า</th><th className="th">รายละเอียด</th></tr></thead>
+              <tbody>
+                {jobs.map((j) => (
+                  <tr key={j.id}>
+                    <td className="td whitespace-nowrap font-mono text-xs">{new Date(j.created_at).toLocaleString("th-TH")}</td>
+                    <td className="td"><span className={STATUS_CHIP[j.status]}>{STATUS_TH[j.status]}</span></td>
+                    <td className="td font-mono text-xs">{j.progress}%</td>
+                    <td className="td text-xs text-slate-500 dark:text-slate-400">{j.message}</td>
+                  </tr>
+                ))}
+                {jobs.length === 0 && <tr><td className="td text-center text-slate-400" colSpan={4}>ยังไม่มีประวัติ</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </AdminOnly>

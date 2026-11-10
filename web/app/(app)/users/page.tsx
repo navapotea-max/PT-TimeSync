@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import PageHeader from "@/components/PageHeader";
 import { usePrivacy } from "@/components/Preferences";
 import { AdminOnly } from "@/components/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -46,18 +47,19 @@ export default function UsersPage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">จัดการผู้ใช้</h1>
-        <p className="text-sm text-slate-500">ผู้ใช้สมัครเองที่หน้าเข้าสู่ระบบ (หรือเพิ่มใน Supabase &gt; Authentication) แล้วกำหนดสิทธิ์ที่นี่</p>
-        {msg && <p className="text-sm text-brand-700">{msg}</p>}
+      <div className="space-y-5">
+        <PageHeader title="ผู้ใช้งานและสิทธิ์"
+          subtitle="ผู้ใช้ลงทะเบียนเองที่หน้าเข้าสู่ระบบ (หรือเพิ่มใน Supabase › Authentication) แล้วกำหนดสิทธิ์ ผูกข้อมูลครู หรือกลุ่มเรียนที่นี่"
+          badge={<span className="chip-gray">{users.length} บัญชี</span>} />
+        {msg && <p className="text-sm text-brand-700 dark:text-brand-300">{msg}</p>}
         <div className="card overflow-x-auto p-0">
           <table className="w-full">
             <thead><tr><th className="th">อีเมล</th><th className="th">ชื่อ</th><th className="th">สิทธิ์</th><th className="th">ผูกกับครู</th><th className="th">กลุ่มนักเรียน</th><th className="th">ยินยอม PDPA</th></tr></thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <td className="td">{privacy.email(u.email)}</td>
-                  <td className="td">{privacy.name(u.full_name)}</td>
+                  <td className="td font-mono text-xs">{privacy.email(u.email)}</td>
+                  <td className="td font-medium text-slate-900 dark:text-white">{privacy.name(u.full_name)}</td>
                   <td className="td">
                     <select className="input" value={u.role} onChange={(e) => update(u.id, { role: e.target.value as Role })}>
                       <option value="admin">ผู้ดูแลระบบ</option>
@@ -83,8 +85,8 @@ export default function UsersPage() {
                   </td>
                   <td className="td text-xs">
                     {u.pdpa_consent_at
-                      ? <span className="text-green-700">✓ {new Date(u.pdpa_consent_at).toLocaleDateString("th-TH")}</span>
-                      : <span className="text-amber-800">ยังไม่ยินยอม</span>}
+                      ? <span className="chip-green">ยินยอม {new Date(u.pdpa_consent_at).toLocaleDateString("th-TH")}</span>
+                      : <span className="chip-amber">ยังไม่ยินยอม</span>}
                   </td>
                 </tr>
               ))}
