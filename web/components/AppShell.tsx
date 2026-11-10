@@ -10,6 +10,8 @@ import {
 } from "@/components/Icons";
 import Logo from "@/components/Logo";
 import { PrivacyToggle, ThemeToggle, usePrivacy } from "@/components/Preferences";
+import { useProfile, useViewAs } from "@/components/ProfileProvider";
+import { ViewAsBanner, ViewAsSwitcher } from "@/components/ViewAsSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 
@@ -35,11 +37,13 @@ const NAV: { section: string; items: NavItem[] }[] = [
   ] },
 ];
 
-export default function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+export default function AppShell({ children }: { profile?: Profile; children: React.ReactNode }) {
+  const profile = useProfile();          // มุมมองที่กำลังแสดง
+  const { real, simulating, view } = useViewAs();
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const privacy = usePrivacy();
-  const [consented, setConsented] = useState(Boolean(profile.pdpa_consent_at));
+  const [consented, setConsented] = useState(Boolean(real.pdpa_consent_at));
   const [semesterName, setSemesterName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -126,15 +130,19 @@ export default function AppShell({ profile, children }: { profile: Profile; chil
             <span className="text-sm font-bold text-slate-900 dark:text-white">PT-TimeSync</span>
           </div>
 
+          <ViewAsSwitcher />
+
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2.5 text-sm">
             <PrivacyToggle />
             <ThemeToggle />
             <div className="hidden h-5 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
             <div className="hidden text-right leading-tight sm:block">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                {privacy.name(profile.full_name) || privacy.email(profile.email)}
+                {privacy.name(real.full_name) || privacy.email(real.email)}
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{ROLE_LABEL[profile.role]}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {ROLE_LABEL[real.role]}{simulating && <span className="text-amber-600 dark:text-amber-400"> · ดูแบบ{ROLE_LABEL[profile.role]}</span>}
+              </p>
             </div>
             <form action="/auth/signout" method="post">
               <button className="btn-secondary btn-sm" title="ออกจากระบบ">
@@ -144,13 +152,15 @@ export default function AppShell({ profile, children }: { profile: Profile; chil
           </div>
         </header>
 
+        <ViewAsBanner />
         {privacy.enabled && (
           <div className="no-print border-b border-brand-200 bg-brand-50 px-4 py-1.5 text-center text-xs font-medium text-brand-800 dark:border-brand-900 dark:bg-brand-500/10 dark:text-brand-200">
             โหมดซ่อนข้อมูลส่วนบุคคล (PDPA) เปิดใช้งานอยู่ — ชื่อและอีเมลถูกอำพรางสำหรับแสดงผลหน้าจอ
           </div>
         )}
 
-        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 lg:p-8">{children}</main>
+        {/* key: เมื่อสลับมุมมอง ให้หน้าโหลดใหม่ตามบทบาทที่เลือก */}
+        <main key={`${view.role}|${view.teacherId}|${view.groupId}`} className="mx-auto w-full max-w-[1400px] flex-1 p-4 lg:p-8">{children}</main>
         {!consented && <ConsentDialog onDone={() => setConsented(true)} />}
       </div>
     </div>

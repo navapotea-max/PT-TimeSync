@@ -8,6 +8,8 @@ export interface Profile {
   student_group_id: string | null;
   pdpa_consent_at?: string | null;
   pdpa_consent_version?: string | null;
+  /** ใช้เมื่อผู้ดูแลระบบจำลองมุมมองครูผู้สอน */
+  teacher_id?: string | null;
 }
 
 export interface PeriodDef {

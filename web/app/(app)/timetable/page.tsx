@@ -5,7 +5,7 @@ import { IconDownload, IconLock, IconPrinter, IconX } from "@/components/Icons";
 import Logo from "@/components/Logo";
 import TimetableGrid, { DAY_DOT, toSessions, type Session, type ViewMode } from "@/components/TimetableGrid";
 import { usePrivacy } from "@/components/Preferences";
-import { useProfile } from "@/components/ProfileProvider";
+import { useProfile, useViewAs } from "@/components/ProfileProvider";
 import { conflictsForMove, findConflicts } from "@/lib/conflicts";
 import { configOf, DAY_NAMES, roomTypeLabel } from "@/lib/constants";
 import { buildWorkbook, type SheetSpec } from "@/lib/exportExcel";
@@ -19,6 +19,7 @@ export default function TimetablePage() {
   const supabase = createClient();
   const profile = useProfile();
   const privacy = usePrivacy();
+  const { simulating } = useViewAs();
   const isAdmin = profile.role === "admin";
 
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -52,7 +53,7 @@ export default function TimetablePage() {
       const act = (sem.data ?? []).find((s: Semester) => s.is_active) ?? sem.data?.[0];
       if (act) setSemesterId(act.id);
       if (profile.role === "teacher") {
-        const me = (tc.data ?? []).find((t: Teacher) => t.user_id === profile.id);
+        const me = (tc.data ?? []).find((t: Teacher) => (profile.teacher_id ? t.id === profile.teacher_id : t.user_id === profile.id));
         if (me) setTargetId(me.id);
       } else if (profile.role === "student" && profile.student_group_id) {
         setTargetId(profile.student_group_id);
@@ -70,8 +71,9 @@ export default function TimetablePage() {
       all.push(...(data ?? []));
       if (!data || data.length < 1000) break;
     }
-    setRows(all);
-  }, [supabase, semesterId]);
+    // จำลองมุมมองครู/นักเรียน: แสดงเฉพาะตารางที่เผยแพร่แล้ว เหมือนที่ผู้ใช้จริงเห็น
+    setRows(simulating ? all.filter((r) => r.status === "published") : all);
+  }, [supabase, semesterId, simulating]);
 
   useEffect(() => { loadRows(); }, [loadRows]);
 

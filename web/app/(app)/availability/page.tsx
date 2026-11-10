@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import { usePrivacy } from "@/components/Preferences";
 import { DAY_DOT } from "@/components/TimetableGrid";
-import { useProfile } from "@/components/ProfileProvider";
+import { useProfile, useViewAs } from "@/components/ProfileProvider";
 import { configOf, DAY_NAMES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { Semester, Teacher } from "@/lib/types";
@@ -15,6 +15,7 @@ export default function AvailabilityPage() {
   const supabase = createClient();
   const profile = useProfile();
   const privacy = usePrivacy();
+  const { real, isRealAdmin } = useViewAs();
   const isAdmin = profile.role === "admin";
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherId, setTeacherId] = useState("");
@@ -29,11 +30,12 @@ export default function AvailabilityPage() {
       setSemester(sem);
       const { data } = await supabase.from("teachers").select("id,user_id,teacher_code,name,unavailable_times").order("teacher_code");
       const list = (data ?? []) as Teacher[];
-      setTeachers(isAdmin ? list : list.filter((t) => t.user_id === profile.id));
-      const first = isAdmin ? list[0] : list.find((t) => t.user_id === profile.id);
+      const isMine = (t: Teacher) => (profile.teacher_id ? t.id === profile.teacher_id : t.user_id === profile.id);
+      setTeachers(isAdmin ? list : list.filter(isMine));
+      const first = isAdmin ? list[0] : list.find(isMine);
       if (first) setTeacherId(first.id);
     })();
-  }, [supabase, isAdmin, profile.id]);
+  }, [supabase, isAdmin, profile.id, profile.teacher_id]);
 
   useEffect(() => {
     const t = teachers.find((x) => x.id === teacherId);
@@ -57,7 +59,8 @@ export default function AvailabilityPage() {
     });
     const times: Times = Array.from(byDay.entries()).sort((a, b) => a[0] - b[0]).map(([day, periods]) => ({ day, periods }));
     const t = teachers.find((x) => x.id === teacherId);
-    const { error } = isAdmin && t?.user_id !== profile.id
+    // ผู้ดูแลระบบ (รวมถึงตอนจำลองมุมมองครู) แก้ไขข้อมูลครูได้โดยตรง; ครูแก้ของตนเองผ่าน RPC
+    const { error } = isRealAdmin && t?.user_id !== real.id
       ? await supabase.from("teachers").update({ unavailable_times: times }).eq("id", teacherId)
       : await supabase.rpc("set_my_unavailable_times", { times });
     if (error) setMsg("บันทึกไม่สำเร็จ: " + error.message);
