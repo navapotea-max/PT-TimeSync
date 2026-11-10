@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import DataTabs from "@/components/DataTabs";
 import { IconPlus, IconSearch, IconX } from "@/components/Icons";
-import { maskEmail, maskName, usePrivacy } from "@/components/Preferences";
+import { maskEmail, maskName, maskPhone, usePrivacy } from "@/components/Preferences";
 import { coerce, type Entity, type Field } from "@/lib/entities";
 import { createClient } from "@/lib/supabase/client";
 
@@ -14,6 +14,7 @@ function display(field: Field, value: unknown, fkOptions: Options, privacy = fal
   const out = rawDisplay(field, value, fkOptions);
   if (!privacy || !field.pii || out === "-") return out;
   if (field.pii === "email") return maskEmail(out);
+  if (field.pii === "phone") return maskPhone(out);
   // fk ที่มีรหัสนำหน้า (เช่น "T01 ครูสมชาย ใจดี") ปิดบังเฉพาะส่วนชื่อ
   if (field.type === "fk") { const [code, ...rest] = out.split(" "); return `${code} ${maskName(rest.join(" "))}`; }
   return maskName(out);

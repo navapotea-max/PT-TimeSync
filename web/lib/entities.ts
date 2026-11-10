@@ -1,4 +1,7 @@
 import { ROOM_TYPES } from "./constants";
+import { ACADEMIC_STANDINGS, PREFIXES, STUDENT_STATUS, TEACHER_POSITIONS } from "./people";
+
+const opts = (xs: string[]) => xs.map((x) => ({ value: x, label: x }));
 
 export type FieldType = "text" | "number" | "boolean" | "select" | "fk" | "json" | "intarray" | "date";
 
@@ -12,7 +15,7 @@ export interface Field {
   help?: string;
   hideInTable?: boolean;
   /** ข้อมูลส่วนบุคคล — ถูกปิดบังเมื่อเปิดโหมด PDPA */
-  pii?: "name" | "email";
+  pii?: "name" | "email" | "phone";
 }
 
 export interface Lookup {
@@ -71,13 +74,17 @@ export const ENTITIES: Record<string, Entity> = {
       { key: "name", label: "ชื่อ-สกุล", type: "text", required: true, pii: "name" },
       { key: "email", label: "อีเมล (ใช้ผูกบัญชีล็อกอิน)", type: "text", pii: "email" },
       { key: "department", label: "แผนกวิชา", type: "text" },
+      { key: "position", label: "ตำแหน่ง", type: "select", options: opts(TEACHER_POSITIONS) },
+      { key: "academic_standing", label: "วิทยฐานะ", type: "select", options: opts(ACADEMIC_STANDINGS), hideInTable: true },
+      { key: "education", label: "วุฒิการศึกษา", type: "text", hideInTable: true },
+      { key: "phone", label: "เบอร์ติดต่อ", type: "text", pii: "phone", hideInTable: true },
       { key: "max_hours_per_week", label: "คาบสอนสูงสุด/สัปดาห์", type: "number" },
       { key: "unavailable_times", label: "เวลาที่ไม่สะดวกสอน", type: "json", hideInTable: true,
         help: 'เช่น [{"day":1,"periods":[1,2]}] หรือแก้ไขแบบตารางที่เมนู "เวลาไม่สะดวกสอน"' },
     ],
-    importColumns: ["teacher_code", "name", "email", "department", "max_hours_per_week", "unavailable_times"],
+    importColumns: ["teacher_code", "name", "email", "department", "position", "academic_standing", "education", "phone", "max_hours_per_week", "unavailable_times"],
     sample:
-      'teacher_code,name,email,department,max_hours_per_week,unavailable_times\nT13,ครูตัวอย่าง ทดสอบ,t13@example.com,ช่างยนต์,22,"1:1-2;5:5-8"',
+      'teacher_code,name,email,department,position,academic_standing,education,phone,max_hours_per_week,unavailable_times\nT13,ครูตัวอย่าง ทดสอบ,t13@example.com,ช่างยนต์,ครู,ชำนาญการ,ค.อ.บ. เครื่องกล,080-000-0000,22,"1:1-2;5:5-8"',
   },
   rooms: {
     key: "rooms",
@@ -129,11 +136,40 @@ export const ENTITIES: Record<string, Entity> = {
       { key: "is_parallel", label: "กลุ่มคู่ขนาน", type: "boolean" },
       { key: "parallel_ref_id", label: "เรียนรวมกับกลุ่ม", type: "fk",
         fk: { table: "student_groups", labelCols: ["group_code"], order: "group_code" } },
+      { key: "advisor_teacher_id", label: "ครูที่ปรึกษา", type: "fk", pii: "name",
+        fk: { table: "teachers", labelCols: ["teacher_code", "name"], order: "teacher_code" } },
     ],
-    importColumns: ["group_code", "group_name", "department", "level", "student_count", "is_parallel", "parallel_ref_code"],
-    lookups: [{ column: "parallel_ref_code", table: "student_groups", match: "group_code", target: "parallel_ref_id" }],
+    importColumns: ["group_code", "group_name", "department", "level", "student_count", "is_parallel", "parallel_ref_code", "advisor_teacher_code"],
+    lookups: [
+      { column: "parallel_ref_code", table: "student_groups", match: "group_code", target: "parallel_ref_id" },
+      { column: "advisor_teacher_code", table: "teachers", match: "teacher_code", target: "advisor_teacher_id" },
+    ],
     sample:
-      "group_code,group_name,department,level,student_count,is_parallel,parallel_ref_code\nชฟ.1/2,ปวช.1 ช่างไฟฟ้ากำลัง กลุ่ม 2,ช่างไฟฟ้ากำลัง,ปวช.1,30,true,ชฟ.1/1",
+      "group_code,group_name,department,level,student_count,is_parallel,parallel_ref_code,advisor_teacher_code\nชฟ.1/2,ปวช.1 ช่างไฟฟ้ากำลัง กลุ่ม 2,ช่างไฟฟ้ากำลัง,ปวช.1,30,true,ชฟ.1/1,T03",
+  },
+  students: {
+    key: "students",
+    table: "students",
+    title: "นักเรียน",
+    orderBy: "student_code",
+    uniqueKey: ["student_code"],
+    fields: [
+      { key: "student_code", label: "รหัสนักเรียน", type: "text", required: true },
+      { key: "prefix", label: "คำนำหน้า", type: "select", options: opts(PREFIXES) },
+      { key: "first_name", label: "ชื่อ", type: "text", required: true, pii: "name" },
+      { key: "last_name", label: "นามสกุล", type: "text", required: true, pii: "name" },
+      { key: "nickname", label: "ชื่อเล่น", type: "text", hideInTable: true },
+      { key: "student_group_id", label: "กลุ่มเรียน", type: "fk",
+        fk: { table: "student_groups", labelCols: ["group_code"], order: "group_code" } },
+      { key: "email", label: "อีเมล (ใช้ผูกบัญชีล็อกอิน)", type: "text", pii: "email", hideInTable: true },
+      { key: "entry_year", label: "ปีที่เข้าศึกษา", type: "number" },
+      { key: "status", label: "สถานะ", type: "select", required: true,
+        options: Object.entries(STUDENT_STATUS).map(([value, v]) => ({ value, label: v.label })) },
+    ],
+    importColumns: ["student_code", "prefix", "first_name", "last_name", "nickname", "group_code", "email", "entry_year", "status"],
+    lookups: [{ column: "group_code", table: "student_groups", match: "group_code", target: "student_group_id" }],
+    sample:
+      "student_code,prefix,first_name,last_name,nickname,group_code,email,entry_year,status\n68201999,นาย,ตัวอย่าง,ทดสอบ,ต้น,ชย.1/1,std68201999@example.com,2568,studying",
   },
   enrollments: {
     key: "enrollments",
@@ -169,7 +205,7 @@ export const ENTITIES: Record<string, Entity> = {
   },
 };
 
-export const IMPORTABLE = ["teachers", "rooms", "subjects", "student_groups", "enrollments", "semesters"];
+export const IMPORTABLE = ["teachers", "students", "rooms", "subjects", "student_groups", "enrollments", "semesters"];
 
 /** "1:1-2;5:5-8"  หรือ JSON  ->  [{day:1,periods:[1,2]},{day:5,periods:[5,6,7,8]}] */
 export function parseUnavailable(v: string): { day: number; periods: number[] }[] {

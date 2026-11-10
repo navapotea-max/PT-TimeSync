@@ -13,6 +13,7 @@ export interface ViewAs {
   role: Role;
   teacherId: string | null;
   groupId: string | null;
+  studentId?: string | null;
 }
 
 interface ViewCtx {
@@ -55,6 +56,7 @@ export function ProfileProvider({ profile, children }: { profile: Profile; child
       role: view.role,
       student_group_id: view.role === "student" ? view.groupId : null,
       teacher_id: view.role === "teacher" ? view.teacherId : null,
+      student_id: view.role === "student" ? view.studentId ?? null : null,
     };
   }, [profile, simulating, view]);
 

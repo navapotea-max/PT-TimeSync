@@ -8,6 +8,7 @@ export const DATA_TABS = [
   { href: "/data/subjects", label: "รายวิชา" },
   { href: "/data/rooms", label: "ห้องเรียน" },
   { href: "/data/student_groups", label: "กลุ่มนักเรียน" },
+  { href: "/data/students", label: "นักเรียน" },
   { href: "/data/enrollments", label: "ภาระงานสอน" },
   { href: "/data/semesters", label: "ภาคเรียน" },
   { href: "/import", label: "นำเข้าไฟล์ CSV / Excel" },

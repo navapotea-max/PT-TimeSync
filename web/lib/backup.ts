@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { maskEmail, maskName } from "@/components/Preferences";
+import { maskEmail, maskName, maskPhone } from "@/components/Preferences";
 
 export const BACKUP_FORMAT = "pt-timesync-backup";
 export const BACKUP_VERSION = 1;
@@ -11,6 +11,8 @@ export const BACKUP_TABLES = [
   { table: "rooms", label: "ห้องเรียน" },
   { table: "student_groups", label: "กลุ่มนักเรียน" },
   { table: "teachers", label: "ครูผู้สอน" },
+  { table: "students", label: "นักเรียน" },
+  { table: "student_contacts", label: "ข้อมูลติดต่อนักเรียน" },
   { table: "enrollments", label: "ภาระงานสอน" },
   { table: "schedules", label: "ตารางสอน" },
   { table: "profiles", label: "ผู้ใช้ (สิทธิ์)" },
@@ -49,6 +51,20 @@ function anonymize(table: string, rows: Row[]): Row[] {
     if (table === "teachers" && x.name) x.name = maskName(x.name as string);
     if (table === "profiles" && x.full_name) x.full_name = maskName(x.full_name as string);
     if (table === "data_requests") x.detail = x.detail ? "[ปิดบัง]" : null;
+    if (table === "students") {
+      x.first_name = maskName(x.first_name as string);
+      x.last_name = maskName(x.last_name as string);
+      x.nickname = null;
+      x.photo_path = null;
+    }
+    if (table === "teachers") { x.phone = maskPhone(x.phone as string) || null; x.photo_path = null; }
+    if (table === "student_contacts") {
+      x.phone = maskPhone(x.phone as string) || null;
+      x.parent_phone = maskPhone(x.parent_phone as string) || null;
+      x.parent_name = maskName(x.parent_name as string) || null;
+      x.address = x.address ? "[ปิดบัง]" : null;
+      x.birth_date = null;
+    }
     return x;
   });
 }
@@ -96,7 +112,7 @@ export async function restoreBackup(sb: SupabaseClient, b: BackupFile, mode: "me
   const T = b.tables;
 
   if (mode === "replace") {
-    for (const t of ["schedules", "enrollments", "teachers", "student_groups", "rooms", "subjects", "semesters"]) {
+    for (const t of ["schedules", "enrollments", "student_contacts", "students", "teachers", "student_groups", "rooms", "subjects", "semesters"]) {
       const { error } = await sb.from(t).delete().neq("id", ALL);
       if (error) throw new Error(`ลบข้อมูลเดิม ${t} ไม่สำเร็จ: ${error.message}`);
       log(`ลบข้อมูลเดิม: ${t}`);
@@ -113,24 +129,28 @@ export async function restoreBackup(sb: SupabaseClient, b: BackupFile, mode: "me
   log(`ห้องเรียน: ${await upsert(sb, "rooms", T.rooms ?? [], log)} รายการ`);
 
   const groups = T.student_groups ?? [];
-  log(`กลุ่มนักเรียน: ${await upsert(sb, "student_groups", groups.map((g) => ({ ...g, parallel_ref_id: null })), log)} รายการ`);
-  for (const g of groups.filter((x) => x.parallel_ref_id)) {
-    await sb.from("student_groups").update({ parallel_ref_id: g.parallel_ref_id }).eq("id", g.id as string);
-  }
+  // กลุ่มเรียนอ้างอิงกลุ่มคู่ขนานและครูที่ปรึกษา -> ใส่เป็น null ก่อน แล้วเติมหลังนำเข้าครู
+  log(`กลุ่มนักเรียน: ${await upsert(sb, "student_groups", groups.map((g) => ({ ...g, parallel_ref_id: null, advisor_teacher_id: null })), log)} รายการ`);
 
-  // ครู: ถ้าบัญชีผู้ใช้ที่ผูกไว้ไม่มีแล้ว ให้ยกเลิกการผูก
-  const teachers = T.teachers ?? [];
-  let tOk = 0;
-  for (let i = 0; i < teachers.length; i += 500) {
-    const chunk = teachers.slice(i, i + 500);
-    let { error } = await sb.from("teachers").upsert(chunk, { onConflict: "id" });
-    if (error && /user_id|foreign key/i.test(error.message)) {
-      log("⚠ บางบัญชีผู้ใช้ของครูไม่มีในระบบแล้ว — นำเข้าโดยไม่ผูกบัญชี");
-      ({ error } = await sb.from("teachers").upsert(chunk.map((t) => ({ ...t, user_id: null })), { onConflict: "id" }));
+  // ครู / นักเรียน: ถ้าบัญชีผู้ใช้ที่ผูกไว้ไม่มีแล้ว ให้ยกเลิกการผูก
+  for (const [table, label] of [["teachers", "ครูผู้สอน"], ["students", "นักเรียน"]] as const) {
+    const rows = T[table] ?? [];
+    let ok = 0;
+    for (let i = 0; i < rows.length; i += 500) {
+      const chunk = rows.slice(i, i + 500);
+      let { error } = await sb.from(table).upsert(chunk, { onConflict: "id" });
+      if (error && /user_id|foreign key/i.test(error.message)) {
+        log(`⚠ บางบัญชีผู้ใช้ของ${label}ไม่มีในระบบแล้ว — นำเข้าโดยไม่ผูกบัญชี`);
+        ({ error } = await sb.from(table).upsert(chunk.map((r) => ({ ...r, user_id: null })), { onConflict: "id" }));
+      }
+      if (error) log(`⚠ ${table}: ${error.message}`); else ok += chunk.length;
     }
-    if (error) log(`⚠ teachers: ${error.message}`); else tOk += chunk.length;
+    log(`${label}: ${ok} รายการ`);
   }
-  log(`ครูผู้สอน: ${tOk} รายการ`);
+  for (const g of groups.filter((x) => x.parallel_ref_id || x.advisor_teacher_id)) {
+    await sb.from("student_groups").update({ parallel_ref_id: g.parallel_ref_id ?? null, advisor_teacher_id: g.advisor_teacher_id ?? null }).eq("id", g.id as string);
+  }
+  log(`ข้อมูลติดต่อนักเรียน: ${await upsert(sb, "student_contacts", T.student_contacts ?? [], log)} รายการ`);
 
   log(`ภาระงานสอน: ${await upsert(sb, "enrollments", T.enrollments ?? [], log)} รายการ`);
   log(`ตารางสอน: ${await upsert(sb, "schedules", (T.schedules ?? []).map((s) => ({ ...s, job_id: null })), log)} คาบ`);

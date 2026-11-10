@@ -52,7 +52,13 @@ export default function TimetablePage() {
       setGroups(gr.data ?? []);
       const act = (sem.data ?? []).find((s: Semester) => s.is_active) ?? sem.data?.[0];
       if (act) setSemesterId(act.id);
-      if (profile.role === "teacher") {
+      // ลิงก์จากหน้าโปรไฟล์: /timetable?mode=teacher&id=...
+      const qs = new URLSearchParams(window.location.search);
+      const qm = qs.get("mode"); const qid = qs.get("id");
+      if ((qm === "group" || qm === "teacher" || qm === "room") && qid) {
+        setMode(qm);
+        setTargetId(qid);
+      } else if (profile.role === "teacher") {
         const me = (tc.data ?? []).find((t: Teacher) => (profile.teacher_id ? t.id === profile.teacher_id : t.user_id === profile.id));
         if (me) setTargetId(me.id);
       } else if (profile.role === "student" && profile.student_group_id) {

@@ -66,6 +66,12 @@ export default function PdpaPage() {
       const { data: sch } = await supabase.from("schedule_details").select("day_of_week,start_period,end_period,subject_code,subject_name,group_code,room_code,status").eq("teacher_id", teacher.id);
       out.schedule = sch;
     }
+    const { data: student } = await supabase.from("students").select("*").eq("user_id", profile.id).maybeSingle();
+    if (student) {
+      out.student = student;
+      const { data: contact } = await supabase.from("student_contacts").select("*").eq("student_id", student.id).maybeSingle();
+      out.student_contact = contact;
+    }
     if (profile.student_group_id) {
       const { data: sch } = await supabase.from("schedule_details").select("day_of_week,start_period,end_period,subject_code,subject_name,teacher_name,room_code").eq("student_group_id", profile.student_group_id);
       out.group_schedule = sch;

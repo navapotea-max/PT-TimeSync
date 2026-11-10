@@ -12,8 +12,8 @@ export const ROLE_TH: Record<Role, string> = { admin: "ผู้ดูแลร�
 /** หน้าที่แต่ละบทบาทเข้าได้ (ใช้ตัดสินว่าต้องพากลับหน้าแรกหรือไม่เมื่อสลับมุมมอง) */
 const ALLOWED: Record<Role, string[]> = {
   admin: ["*"],
-  teacher: ["/", "/timetable", "/availability", "/pdpa", "/privacy"],
-  student: ["/", "/timetable", "/pdpa", "/privacy"],
+  teacher: ["/", "/timetable", "/availability", "/profile", "/directory", "/people", "/pdpa", "/privacy"],
+  student: ["/", "/timetable", "/profile", "/pdpa", "/privacy"],
 };
 
 interface Opt { id: string; label: string }
@@ -27,6 +27,7 @@ export function ViewAsSwitcher() {
   const [teachers, setTeachers] = useState<Opt[]>([]);
   const [groups, setGroups] = useState<Opt[]>([]);
   const [rawTeachers, setRawTeachers] = useState<{ id: string; teacher_code: string; name: string }[]>([]);
+  const [students, setStudents] = useState<{ id: string; student_code: string; full_name: string; student_group_id: string | null }[]>([]);
 
   useEffect(() => {
     if (!isRealAdmin) return;
@@ -34,6 +35,9 @@ export function ViewAsSwitcher() {
     sb.from("teachers").select("id,teacher_code,name").order("teacher_code").then(({ data }) => setRawTeachers(data ?? []));
     sb.from("student_groups").select("id,group_code,group_name").order("group_code")
       .then(({ data }) => setGroups((data ?? []).map((g: { id: string; group_code: string; group_name: string }) => ({ id: g.id, label: `${g.group_code} — ${g.group_name}` }))));
+    // ตาราง students อาจยังไม่มี (ยังไม่ได้รัน migration โปรไฟล์) -> ไม่เป็นไร ใช้แค่กลุ่มเรียน
+    sb.from("student_directory").select("id,student_code,full_name,student_group_id").order("student_code")
+      .then(({ data }) => setStudents(data ?? []));
   }, [isRealAdmin]);
 
   useEffect(() => {
@@ -45,6 +49,10 @@ export function ViewAsSwitcher() {
   function apply(next: ViewAs) {
     if (next.role === "teacher" && !next.teacherId) next = { ...next, teacherId: teachers[0]?.id ?? null };
     if (next.role === "student" && !next.groupId) next = { ...next, groupId: groups[0]?.id ?? null };
+    if (next.role === "student") {
+      const inGroup = students.filter((s) => s.student_group_id === next.groupId);
+      if (!inGroup.some((s) => s.id === next.studentId)) next = { ...next, studentId: inGroup[0]?.id ?? null };
+    }
     setView(next);
     const allowed = ALLOWED[next.role];
     const ok = allowed.includes("*") || allowed.some((p) => (p === "/" ? path === "/" : path.startsWith(p)));
@@ -71,8 +79,16 @@ export function ViewAsSwitcher() {
       )}
       {view.role === "student" && (
         <select className="input w-auto max-w-[220px] py-1 text-xs" aria-label="เลือกกลุ่มนักเรียน" value={view.groupId ?? ""}
-          onChange={(e) => apply({ ...view, groupId: e.target.value })}>
+          onChange={(e) => apply({ ...view, groupId: e.target.value, studentId: null })}>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+        </select>
+      )}
+      {view.role === "student" && students.some((s) => s.student_group_id === view.groupId) && (
+        <select className="input w-auto max-w-[200px] py-1 text-xs" aria-label="เลือกนักเรียน" value={view.studentId ?? ""}
+          onChange={(e) => apply({ ...view, studentId: e.target.value })}>
+          {students.filter((s) => s.student_group_id === view.groupId).map((s) => (
+            <option key={s.id} value={s.id}>{s.student_code} {privacy.name(s.full_name)}</option>
+          ))}
         </select>
       )}
     </div>
@@ -92,6 +108,9 @@ export function ViewAsBanner() {
     if (view.role === "teacher" && view.teacherId) {
       sb.from("teachers").select("teacher_code,name").eq("id", view.teacherId).maybeSingle()
         .then(({ data }) => setWho(data ? `${data.teacher_code} ${privacy.name(data.name)}` : ""));
+    } else if (view.role === "student" && view.studentId) {
+      sb.from("student_directory").select("student_code,full_name,group_code").eq("id", view.studentId).maybeSingle()
+        .then(({ data }) => setWho(data ? `${data.student_code} ${privacy.name(data.full_name)} (กลุ่ม ${data.group_code})` : ""));
     } else if (view.role === "student" && view.groupId) {
       sb.from("student_groups").select("group_code,group_name").eq("id", view.groupId).maybeSingle()
         .then(({ data }) => setWho(data ? `กลุ่ม ${data.group_code} ${data.group_name}` : ""));
@@ -105,7 +124,7 @@ export function ViewAsBanner() {
         กำลังแสดงผลในมุมมอง <b>{ROLE_TH[view.role]}</b>{who && <> — {who}</>} · แสดงเฉพาะสิ่งที่ผู้ใช้จริงมองเห็น (ตารางที่เผยแพร่แล้ว)
       </span>
       <button type="button" className="font-semibold underline"
-        onClick={() => { setView({ role: real.role, teacherId: null, groupId: null }); router.refresh(); }}>
+        onClick={() => { setView({ role: real.role, teacherId: null, groupId: null, studentId: null }); router.refresh(); }}>
         กลับสู่มุมมองผู้ดูแลระบบ
       </button>
     </div>

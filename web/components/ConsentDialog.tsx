@@ -26,9 +26,10 @@ export default function ConsentDialog({ onDone }: { onDone: () => void }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px]">
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900">
         <h2 className="mb-2 text-base font-bold text-slate-900 dark:text-white">การคุ้มครองข้อมูลส่วนบุคคล (PDPA)</h2>
-        <p className="text-sm text-slate-600">
-          ระบบจัดเก็บและใช้ ชื่อ-สกุล อีเมล ตารางสอน/ตารางเรียน และเวลาที่ไม่สะดวกสอนของท่าน
-          เพื่อการจัดตารางเรียนตารางสอนของวิทยาลัยเท่านั้น ไม่เปิดเผยแก่บุคคลภายนอก
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          ระบบจัดเก็บและใช้ข้อมูลส่วนบุคคลของท่าน (ชื่อ-สกุล อีเมล แผนกวิชา ชั้น กลุ่มเรียน รูปถ่าย ข้อมูลติดต่อ
+          ตารางสอน/ตารางเรียน) เพื่อการจัดการเรียนการสอนของวิทยาลัยเท่านั้น ไม่เปิดเผยแก่บุคคลภายนอก
+          ข้อมูลติดต่อของนักเรียนเปิดเผยเฉพาะต่อครูที่ปรึกษาและผู้ดูแลระบบ
           ท่านสามารถขอเข้าถึง แก้ไข ลบ หรือถอนความยินยอมได้ที่เมนู “PDPA / ข้อมูลส่วนบุคคล”
         </p>
         <label className="mt-4 flex items-start gap-2 text-sm">

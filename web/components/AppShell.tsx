@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 import ConsentDialog from "@/components/ConsentDialog";
 import { DATA_TABS } from "@/components/DataTabs";
 import {
+  IconIdCard, IconUserCircle,
   IconClock, IconDashboard, IconDatabase, IconDownload, IconLogout, IconMenu, IconPlay, IconShield, IconTable, IconUsers,
 } from "@/components/Icons";
 import Logo from "@/components/Logo";
 import { PrivacyToggle, ThemeToggle, usePrivacy } from "@/components/Preferences";
 import { useProfile, useViewAs } from "@/components/ProfileProvider";
 import { ViewAsBanner, ViewAsSwitcher } from "@/components/ViewAsSwitcher";
+import { PDPA_VERSION } from "@/lib/pdpa";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/types";
 
@@ -25,6 +27,10 @@ const NAV: { section: string; items: NavItem[] }[] = [
     { href: "/", label: "ภาพรวมระบบ", roles: ["admin", "teacher", "student"], icon: IconDashboard },
     { href: "/timetable", label: "ตารางเรียน / ตารางสอน", roles: ["admin", "teacher", "student"], icon: IconTable },
     { href: "/availability", label: "เวลาที่ไม่สะดวกสอน", roles: ["admin", "teacher"], icon: IconClock },
+  ] },
+  { section: "บุคลากรและนักเรียน", items: [
+    { href: "/profile", label: "โปรไฟล์ของฉัน", roles: ["admin", "teacher", "student"], icon: IconUserCircle },
+    { href: "/directory", label: "รายชื่อครูและนักเรียน", roles: ["admin", "teacher"], icon: IconIdCard, match: ["/directory", "/people"] },
   ] },
   { section: "การจัดการและจัดตาราง", items: [
     { href: "/data/teachers", label: "ฐานข้อมูลและนำเข้าไฟล์", roles: ["admin"], icon: IconDatabase, match: ["/data", "/import"] },
@@ -43,7 +49,8 @@ export default function AppShell({ children }: { profile?: Profile; children: Re
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const privacy = usePrivacy();
-  const [consented, setConsented] = useState(Boolean(real.pdpa_consent_at));
+  // ต้องยินยอมใหม่เมื่อนโยบายเปลี่ยนเวอร์ชัน
+  const [consented, setConsented] = useState(Boolean(real.pdpa_consent_at) && real.pdpa_consent_version === PDPA_VERSION);
   const [semesterName, setSemesterName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,7 +93,7 @@ export default function AppShell({ children }: { profile?: Profile; children: Re
                           <Icon className={`h-4 w-4 shrink-0 ${active ? "" : "text-slate-400 dark:text-slate-500"}`} />
                           <span className="truncate">{i.label}</span>
                         </Link>
-                        {i.match && active && (
+                        {i.href === "/data/teachers" && active && (
                           <div className="ml-6 mt-1 space-y-0.5 border-l border-slate-100 pl-3 dark:border-slate-800">
                             {DATA_TABS.map((t) => {
                               const subActive = path.startsWith(t.href);
@@ -136,14 +143,14 @@ export default function AppShell({ children }: { profile?: Profile; children: Re
             <PrivacyToggle />
             <ThemeToggle />
             <div className="hidden h-5 w-px bg-slate-200 dark:bg-slate-700 sm:block" />
-            <div className="hidden text-right leading-tight sm:block">
+            <Link href="/profile" title="โปรไฟล์ของฉัน" className="hidden text-right leading-tight hover:opacity-80 sm:block">
               <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
                 {privacy.name(real.full_name) || privacy.email(real.email)}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {ROLE_LABEL[real.role]}{simulating && <span className="text-amber-600 dark:text-amber-400"> · ดูแบบ{ROLE_LABEL[profile.role]}</span>}
               </p>
-            </div>
+            </Link>
             <form action="/auth/signout" method="post">
               <button className="btn-secondary btn-sm" title="ออกจากระบบ">
                 <IconLogout className="h-3.5 w-3.5" /><span className="hidden sm:inline">ออกจากระบบ</span>
@@ -160,7 +167,7 @@ export default function AppShell({ children }: { profile?: Profile; children: Re
         )}
 
         {/* key: เมื่อสลับมุมมอง ให้หน้าโหลดใหม่ตามบทบาทที่เลือก */}
-        <main key={`${view.role}|${view.teacherId}|${view.groupId}`} className="mx-auto w-full max-w-[1400px] flex-1 p-4 lg:p-8">{children}</main>
+        <main key={`${view.role}|${view.teacherId}|${view.groupId}|${view.studentId ?? ""}`} className="mx-auto w-full max-w-[1400px] flex-1 p-4 lg:p-8">{children}</main>
         {!consented && <ConsentDialog onDone={() => setConsented(true)} />}
       </div>
     </div>

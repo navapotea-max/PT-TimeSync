@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 /* =====================================================================
  * โหมดสว่าง / โหมดมืด
@@ -68,6 +68,10 @@ interface PrivacyCtx {
   name: (v: string | null | undefined) => string;
   /** ปิดบังอีเมล เช่น "navapotea@gmail.com" -> "n*******@gmail.com" */
   email: (v: string | null | undefined) => string;
+  /** ปิดบังเบอร์โทร เช่น "081-234-5678" -> "081-***-**78" */
+  phone: (v: string | null | undefined) => string;
+  /** ปิดบังข้อความทั้งหมด (ที่อยู่ วันเกิด ฯลฯ) */
+  secret: (v: string | null | undefined) => string;
 }
 
 const TITLES = ["ครู", "นาย", "นางสาว", "นาง", "ดร.", "อ.", "ผศ.", "รศ.", "Mr.", "Mrs.", "Ms."];
@@ -82,6 +86,13 @@ export function maskName(v: string | null | undefined): string {
   }).join(" ");
 }
 
+export function maskPhone(v: string | null | undefined): string {
+  if (!v) return "";
+  const digits = v.replace(/\D/g, "");
+  if (digits.length < 6) return "***";
+  return `${digits.slice(0, 3)}-***-**${digits.slice(-2)}`;
+}
+
 export function maskEmail(v: string | null | undefined): string {
   if (!v) return "";
   const [user, domain] = v.split("@");
@@ -90,7 +101,7 @@ export function maskEmail(v: string | null | undefined): string {
 }
 
 const Ctx = createContext<PrivacyCtx>({
-  enabled: false, toggle: () => {}, name: (v) => v ?? "", email: (v) => v ?? "",
+  enabled: false, toggle: () => {}, name: (v) => v ?? "", email: (v) => v ?? "", phone: (v) => v ?? "", secret: (v) => v ?? "",
 });
 
 export function PrivacyProvider({ children }: { children: React.ReactNode }) {
@@ -106,7 +117,10 @@ export function PrivacyProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const name = useCallback((v: string | null | undefined) => (enabled ? maskName(v) : v ?? ""), [enabled]);
   const email = useCallback((v: string | null | undefined) => (enabled ? maskEmail(v) : v ?? ""), [enabled]);
-  return <Ctx.Provider value={{ enabled, toggle, name, email }}>{children}</Ctx.Provider>;
+  const phone = useCallback((v: string | null | undefined) => (enabled ? maskPhone(v) : v ?? ""), [enabled]);
+  const secret = useCallback((v: string | null | undefined) => (enabled && v ? "[ปิดบังตาม PDPA]" : v ?? ""), [enabled]);
+  const value = useMemo(() => ({ enabled, toggle, name, email, phone, secret }), [enabled, toggle, name, email, phone, secret]);
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export const usePrivacy = () => useContext(Ctx);

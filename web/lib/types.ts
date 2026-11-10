@@ -10,6 +10,8 @@ export interface Profile {
   pdpa_consent_version?: string | null;
   /** ใช้เมื่อผู้ดูแลระบบจำลองมุมมองครูผู้สอน */
   teacher_id?: string | null;
+  /** ใช้เมื่อผู้ดูแลระบบจำลองมุมมองนักเรียน */
+  student_id?: string | null;
 }
 
 export interface PeriodDef {
@@ -93,4 +95,56 @@ export interface ScheduleJob {
   result: Record<string, unknown> | null;
   created_at: string;
   finished_at: string | null;
+}
+
+export type StudentStatus = "studying" | "suspended" | "graduated" | "resigned";
+
+export interface TeacherFull {
+  id: string;
+  user_id: string | null;
+  teacher_code: string;
+  name: string;
+  email: string | null;
+  department: string | null;
+  max_hours_per_week: number;
+  position: string | null;
+  academic_standing: string | null;
+  education: string | null;
+  phone: string | null;
+  photo_path: string | null;
+  updated_at?: string;
+}
+
+export interface StudentRow {
+  id: string;
+  student_code: string;
+  prefix: string | null;
+  first_name: string;
+  last_name: string;
+  nickname: string | null;
+  full_name: string;
+  email: string | null;
+  user_id: string | null;
+  entry_year: number | null;
+  status: StudentStatus;
+  photo_path: string | null;
+  updated_at?: string;
+  student_group_id: string | null;
+  group_code: string | null;
+  group_name: string | null;
+  department: string | null;
+  level: string | null;
+  advisor_teacher_id: string | null;
+  advisor_name: string | null;
+  advisor_code: string | null;
+}
+
+export interface StudentContact {
+  student_id: string;
+  phone: string | null;
+  birth_date: string | null;
+  address: string | null;
+  parent_name: string | null;
+  parent_relation: string | null;
+  parent_phone: string | null;
 }
