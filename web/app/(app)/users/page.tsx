@@ -1,0 +1,90 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { AdminOnly } from "@/components/ProfileProvider";
+import { createClient } from "@/lib/supabase/client";
+import type { Profile, Role, StudentGroup, Teacher } from "@/lib/types";
+
+export default function UsersPage() {
+  const supabase = createClient();
+  const [users, setUsers] = useState<Profile[]>([]);
+  const [groups, setGroups] = useState<StudentGroup[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const [u, g, t] = await Promise.all([
+      supabase.from("profiles").select("*").order("created_at"),
+      supabase.from("student_groups").select("id,group_code,group_name").order("group_code"),
+      supabase.from("teachers").select("id,user_id,teacher_code,name,unavailable_times").order("teacher_code"),
+    ]);
+    setUsers(u.data ?? []);
+    setGroups(g.data ?? []);
+    setTeachers(t.data ?? []);
+  }, [supabase]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function update(id: string, patch: Partial<Profile>) {
+    const { error } = await supabase.from("profiles").update(patch).eq("id", id);
+    setMsg(error ? "ผิดพลาด: " + error.message : "บันทึกแล้ว");
+    load();
+  }
+
+  async function linkTeacher(userId: string, teacherId: string) {
+    await supabase.from("teachers").update({ user_id: null }).eq("user_id", userId);
+    if (teacherId) {
+      const { error } = await supabase.from("teachers").update({ user_id: userId }).eq("id", teacherId);
+      if (error) return setMsg("ผิดพลาด: " + error.message);
+      await supabase.from("profiles").update({ role: "teacher" }).eq("id", userId).neq("role", "admin");
+    }
+    setMsg("บันทึกแล้ว");
+    load();
+  }
+
+  return (
+    <AdminOnly>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">จัดการผู้ใช้</h1>
+        <p className="text-sm text-slate-500">ผู้ใช้สมัครเองที่หน้าเข้าสู่ระบบ (หรือเพิ่มใน Supabase &gt; Authentication) แล้วกำหนดสิทธิ์ที่นี่</p>
+        {msg && <p className="text-sm text-brand-700">{msg}</p>}
+        <div className="card overflow-x-auto p-0">
+          <table className="w-full">
+            <thead><tr><th className="th">อีเมล</th><th className="th">ชื่อ</th><th className="th">สิทธิ์</th><th className="th">ผูกกับครู</th><th className="th">กลุ่มนักเรียน</th></tr></thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td className="td">{u.email}</td>
+                  <td className="td">{u.full_name}</td>
+                  <td className="td">
+                    <select className="input" value={u.role} onChange={(e) => update(u.id, { role: e.target.value as Role })}>
+                      <option value="admin">ผู้ดูแลระบบ</option>
+                      <option value="teacher">ครูผู้สอน</option>
+                      <option value="student">นักเรียน</option>
+                    </select>
+                  </td>
+                  <td className="td">
+                    <select className="input" value={teachers.find((t) => t.user_id === u.id)?.id ?? ""}
+                      onChange={(e) => linkTeacher(u.id, e.target.value)}>
+                      <option value="">—</option>
+                      {teachers.filter((t) => !t.user_id || t.user_id === u.id).map((t) => (
+                        <option key={t.id} value={t.id}>{t.teacher_code} {t.name}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="td">
+                    <select className="input" value={u.student_group_id ?? ""}
+                      onChange={(e) => update(u.id, { student_group_id: e.target.value || null })}>
+                      <option value="">—</option>
+                      {groups.map((g) => <option key={g.id} value={g.id}>{g.group_code}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </AdminOnly>
+  );
+}

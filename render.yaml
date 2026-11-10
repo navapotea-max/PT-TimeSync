@@ -1,0 +1,24 @@
+# Render Blueprint — deploy AI Engine (Python FastAPI) จาก GitHub
+# Render Dashboard > New > Blueprint > เลือก repo นี้
+services:
+  - type: web
+    name: phonthong-timetable-engine
+    runtime: docker
+    rootDir: engine
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: DEFAULT_TIME_LIMIT
+        value: "60"
+      - key: MAX_TIME_LIMIT
+        value: "300"
+      - key: SOLVER_WORKERS
+        value: "2"

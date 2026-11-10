@@ -1,0 +1,24 @@
+"use client";
+
+import { createContext, useContext } from "react";
+import type { Profile } from "@/lib/types";
+
+const Ctx = createContext<Profile | null>(null);
+
+export function ProfileProvider({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+  return <Ctx.Provider value={profile}>{children}</Ctx.Provider>;
+}
+
+export function useProfile(): Profile {
+  const p = useContext(Ctx);
+  if (!p) throw new Error("useProfile must be used inside ProfileProvider");
+  return p;
+}
+
+export function AdminOnly({ children }: { children: React.ReactNode }) {
+  const p = useProfile();
+  if (p.role !== "admin") {
+    return <div className="card text-center text-slate-500">หน้านี้สำหรับผู้ดูแลระบบเท่านั้น</div>;
+  }
+  return <>{children}</>;
+}
