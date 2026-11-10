@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/Preferences";
 import { PDPA_VERSION } from "@/lib/pdpa";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +46,7 @@ export default function LoginPage() {
       <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-xl">
         <div className="mb-6 text-center">
+          <Logo size={120} className="mx-auto mb-3" />
           <h1 className="text-2xl font-bold text-brand-900">ระบบจัดตารางเรียน-ตารางสอน</h1>
           <p className="text-slate-500">วิทยาลัยการอาชีพโพนทอง</p>
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import ConsentDialog from "@/components/ConsentDialog";
+import Logo from "@/components/Logo";
 import { PrivacyToggle, ThemeToggle, usePrivacy } from "@/components/Preferences";
 import type { Profile } from "@/lib/types";
 
@@ -66,17 +67,23 @@ export default function AppShell({ profile, children }: { profile: Profile; chil
   return (
     <div className="min-h-screen lg:flex">
       <aside className={`no-print fixed inset-y-0 left-0 z-40 w-64 transform bg-brand-900 p-4 transition lg:static lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="mb-6 px-3">
-          <p className="text-lg font-bold text-white">ระบบจัดตารางสอน</p>
-          <p className="text-xs text-brand-100">วิทยาลัยการอาชีพโพนทอง</p>
-        </div>
+        <Link href="/" className="mb-6 flex items-center gap-3 px-2" onClick={() => setOpen(false)}>
+          <Logo size={52} className="bg-white p-0.5" />
+          <div>
+            <p className="text-base font-bold leading-tight text-white">ระบบจัดตารางสอน</p>
+            <p className="text-xs text-brand-100">วิทยาลัยการอาชีพโพนทอง</p>
+          </div>
+        </Link>
         {nav}
       </aside>
       {open && <div className="no-print fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 min-w-0">
         <header className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
-          <button className="btn-secondary lg:hidden" onClick={() => setOpen(true)} aria-label="เมนู">☰</button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <button className="btn-secondary" onClick={() => setOpen(true)} aria-label="เมนู">☰</button>
+            <Logo size={36} />
+          </div>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-2 text-sm">
             <ThemeToggle />
             <PrivacyToggle />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Logo from "@/components/Logo";
 import TimetableGrid, { toSessions, type Session, type ViewMode } from "@/components/TimetableGrid";
 import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
@@ -251,9 +252,12 @@ export default function TimetablePage() {
 
       <div className="flex flex-col gap-4 xl:flex-row">
         <div className="card print-area min-w-0 flex-1">
-          <div className="mb-3 text-center">
+          <div className="mb-3 flex items-center justify-center gap-3 text-center">
+            <Logo size={56} />
+            <div>
             <h2 className="text-lg font-bold">วิทยาลัยการอาชีพโพนทอง — {MODE_LABEL[mode]}</h2>
             <p className="text-sm text-slate-600">{target?.label} | ภาคเรียนที่ {semester?.name}</p>
+            </div>
           </div>
           {rows.length === 0 ? (
             <p className="p-8 text-center text-slate-400">

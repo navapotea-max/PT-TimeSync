@@ -3,34 +3,34 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 /* =====================================================================
- * โหมดมืด / สว่าง
+ * โหมดสว่าง / โหมดมืด
  * ===================================================================== */
-export type ThemeChoice = "light" | "dark" | "system";
 import { THEME_KEY } from "@/lib/theme";
 
+export type ThemeChoice = "light" | "dark";
+
 function applyTheme(choice: ThemeChoice) {
-  const dark = choice === "dark" || (choice === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  const dark = choice === "dark";
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
 }
 
+function savedTheme(): ThemeChoice {
+  try { return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light"; } catch { return "light"; }
+}
+
+/** ปุ่มเลือก โหมดสว่าง / โหมดมืด (ค่าเริ่มต้น = สว่าง, ระบบจำค่าที่เลือกไว้) */
 export function ThemeToggle({ compact = false }: { compact?: boolean }) {
-  const [choice, setChoice] = useState<ThemeChoice>("system");
+  const [choice, setChoice] = useState<ThemeChoice>("light");
 
   useEffect(() => {
-    let saved: ThemeChoice = "system";
-    try { saved = (localStorage.getItem(THEME_KEY) as ThemeChoice) || "system"; } catch { /* ignore */ }
-    setChoice(saved);
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => { if ((localStorage.getItem(THEME_KEY) || "system") === "system") applyTheme("system"); };
-    mq.addEventListener("change", onChange);
+    setChoice(savedTheme());
     // พิมพ์ / PDF ใช้โหมดสว่างเสมอ
     const before = () => document.documentElement.classList.remove("dark");
-    const after = () => applyTheme((localStorage.getItem(THEME_KEY) as ThemeChoice) || "system");
+    const after = () => applyTheme(savedTheme());
     window.addEventListener("beforeprint", before);
     window.addEventListener("afterprint", after);
     return () => {
-      mq.removeEventListener("change", onChange);
       window.removeEventListener("beforeprint", before);
       window.removeEventListener("afterprint", after);
     };
@@ -45,7 +45,6 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const opts: { v: ThemeChoice; icon: string; label: string }[] = [
     { v: "light", icon: "☀️", label: "โหมดสว่าง" },
     { v: "dark", icon: "🌙", label: "โหมดมืด" },
-    { v: "system", icon: "💻", label: "ตามระบบ" },
   ];
   return (
     <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800" role="group" aria-label="ธีม">

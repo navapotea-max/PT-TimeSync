@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { ORG, PDPA_VERSION } from "@/lib/pdpa";
 
 export const metadata = { title: "นโยบายความเป็นส่วนตัว | วิทยาลัยการอาชีพโพนทอง" };
@@ -57,11 +58,14 @@ const SECTIONS: { title: string; body: React.ReactNode }[] = [
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4 lg:p-8">
-      <div className="card">
+      <div className="card flex items-center gap-4">
+        <Logo size={72} />
+        <div>
         <h1 className="text-2xl font-bold">นโยบายความเป็นส่วนตัว (Privacy Notice)</h1>
         <p className="text-sm text-slate-500">
           ระบบจัดตารางเรียน-ตารางสอน {ORG.name} · ฉบับที่ {PDPA_VERSION}
         </p>
+        </div>
       </div>
       {SECTIONS.map((s) => (
         <section key={s.title} className="card text-sm leading-relaxed">
