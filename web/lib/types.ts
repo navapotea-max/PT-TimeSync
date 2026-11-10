@@ -6,6 +6,8 @@ export interface Profile {
   full_name: string | null;
   role: Role;
   student_group_id: string | null;
+  pdpa_consent_at?: string | null;
+  pdpa_consent_version?: string | null;
 }
 
 export interface PeriodDef {

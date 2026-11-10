@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
 import { configOf, DAY_NAMES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +12,7 @@ type Times = { day: number; periods: number[] }[];
 export default function AvailabilityPage() {
   const supabase = createClient();
   const profile = useProfile();
+  const privacy = usePrivacy();
   const isAdmin = profile.role === "admin";
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherId, setTeacherId] = useState("");
@@ -75,7 +77,7 @@ export default function AvailabilityPage() {
           <div className="min-w-[260px]">
             <label className="label">ครูผู้สอน</label>
             <select className="input" value={teacherId} onChange={(e) => setTeacherId(e.target.value)} disabled={!isAdmin}>
-              {teachers.map((t) => <option key={t.id} value={t.id}>{t.teacher_code} — {t.name}</option>)}
+              {teachers.map((t) => <option key={t.id} value={t.id}>{t.teacher_code} — {privacy.name(t.name)}</option>)}
             </select>
           </div>
           <p className="text-sm text-slate-500">คลิกช่องเพื่อทำเครื่องหมาย ✕ = ไม่สะดวกสอน</p>

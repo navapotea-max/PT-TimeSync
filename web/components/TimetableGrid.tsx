@@ -1,5 +1,6 @@
 "use client";
 
+import { usePrivacy } from "@/components/Preferences";
 import { DAY_COLORS, DAY_NAMES } from "@/lib/constants";
 import type { ScheduleRow, SemesterConfig } from "@/lib/types";
 
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export default function TimetableGrid({ config, sessions, mode, editable, conflictKeys, selectedKey, onSelect, onDrop }: Props) {
+  const privacy = usePrivacy();
   const periods = config.periods;
   // คอลัมน์: [วัน] [คาบ...] [พักกลางวัน] [คาบ...]
   const colOf = new Map<number, number>();
@@ -51,9 +53,9 @@ export default function TimetableGrid({ config, sessions, mode, editable, confli
   const line2 = (s: Session) => {
     const r = s.rows[0];
     const groups = Array.from(new Set(s.rows.map((x) => x.group_code))).join(", ");
-    if (mode === "group") return [r.teacher_name, r.room_code ?? "ไม่ระบุห้อง"];
+    if (mode === "group") return [privacy.name(r.teacher_name), r.room_code ?? "ไม่ระบุห้อง"];
     if (mode === "teacher") return [groups, r.room_code ?? "ไม่ระบุห้อง"];
-    return [groups, r.teacher_name];
+    return [groups, privacy.name(r.teacher_name)];
   };
 
   return (
@@ -84,7 +86,7 @@ export default function TimetableGrid({ config, sessions, mode, editable, confli
 
         {config.days.map((d, di) => (
           <div key={`day-${d}`} className="contents">
-            <div className={`flex items-center justify-center border-b border-r border-slate-300 font-semibold ${DAY_COLORS[d]}`}
+            <div className={`flex items-center justify-center border-b border-r border-slate-300 font-semibold text-slate-800 ${DAY_COLORS[d]}`}
               style={{ gridColumn: 1, gridRow: di + 2 }}>
               {DAY_NAMES[d]}
             </div>
@@ -92,7 +94,7 @@ export default function TimetableGrid({ config, sessions, mode, editable, confli
               const bl = blocked.get(`${d}|${p.no}`);
               return (
                 <div key={`${d}-${p.no}`}
-                  className={`border-b border-r border-slate-300 ${bl ? "bg-[repeating-linear-gradient(45deg,#f1f5f9,#f1f5f9_6px,#e2e8f0_6px,#e2e8f0_12px)]" : ""}`}
+                  className={`border-b border-r border-slate-300 ${bl ? "slot-blocked" : ""}`}
                   style={{ gridColumn: colOf.get(p.no), gridRow: di + 2 }}
                   onDragOver={(e) => { if (editable && !bl) e.preventDefault(); }}
                   onDrop={(e) => {

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { PrivacyProvider } from "@/components/Preferences";
 import { ProfileProvider } from "@/components/ProfileProvider";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
@@ -18,7 +19,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ProfileProvider profile={profile}>
-      <AppShell profile={profile}>{children}</AppShell>
+      <PrivacyProvider>
+        <AppShell profile={profile}>{children}</AppShell>
+      </PrivacyProvider>
     </ProfileProvider>
   );
 }

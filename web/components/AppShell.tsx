@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import ConsentDialog from "@/components/ConsentDialog";
+import { PrivacyToggle, ThemeToggle, usePrivacy } from "@/components/Preferences";
 import type { Profile } from "@/lib/types";
 
 const ROLE_LABEL = { admin: "ผู้ดูแลระบบ", teacher: "ครูผู้สอน", student: "นักเรียน" } as const;
@@ -14,6 +16,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     { href: "/", label: "หน้าหลัก", roles: ["admin", "teacher", "student"] },
     { href: "/timetable", label: "ตารางเรียน / ตารางสอน", roles: ["admin", "teacher", "student"] },
     { href: "/availability", label: "เวลาไม่สะดวกสอน", roles: ["admin", "teacher"] },
+    { href: "/pdpa", label: "PDPA / ข้อมูลส่วนบุคคล", roles: ["admin", "teacher", "student"] },
   ] },
   { section: "ข้อมูลหลัก", items: [
     { href: "/data/semesters", label: "ภาคเรียน", roles: ["admin"] },
@@ -27,12 +30,15 @@ const NAV: { section: string; items: NavItem[] }[] = [
   { section: "จัดตาราง", items: [
     { href: "/generate", label: "จัดตารางอัตโนมัติ (AI)", roles: ["admin"] },
     { href: "/users", label: "จัดการผู้ใช้", roles: ["admin"] },
+    { href: "/backup", label: "สำรอง / กู้คืนข้อมูล", roles: ["admin"] },
   ] },
 ];
 
 export default function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const privacy = usePrivacy();
+  const [consented, setConsented] = useState(Boolean(profile.pdpa_consent_at));
 
   const nav = (
     <nav className="space-y-5">
@@ -69,11 +75,13 @@ export default function AppShell({ profile, children }: { profile: Profile; chil
       {open && <div className="no-print fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 min-w-0">
-        <header className="no-print flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
+        <header className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3">
           <button className="btn-secondary lg:hidden" onClick={() => setOpen(true)} aria-label="เมนู">☰</button>
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2 text-sm">
+            <ThemeToggle />
+            <PrivacyToggle />
             <div className="text-right">
-              <p className="font-medium">{profile.full_name ?? profile.email}</p>
+              <p className="font-medium">{privacy.name(profile.full_name) || privacy.email(profile.email)}</p>
               <p className="text-xs text-slate-500">{ROLE_LABEL[profile.role]}</p>
             </div>
             <form action="/auth/signout" method="post">
@@ -81,7 +89,13 @@ export default function AppShell({ profile, children }: { profile: Profile; chil
             </form>
           </div>
         </header>
+        {privacy.enabled && (
+          <div className="no-print bg-emerald-600 px-4 py-1 text-center text-xs text-white">
+            🛡️ โหมดความเป็นส่วนตัว (PDPA) เปิดอยู่ — ชื่อและอีเมลบนหน้าจอถูกปิดบัง
+          </div>
+        )}
         <main className="p-4 lg:p-6">{children}</main>
+        {!consented && <ConsentDialog onDone={() => setConsented(true)} />}
       </div>
     </div>
   );

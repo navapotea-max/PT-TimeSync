@@ -9,7 +9,7 @@ export interface Conflict {
 }
 
 /** ตรวจการชนกันของตาราง: ครู / กลุ่ม / ห้อง ที่ถูกใช้ในคาบเดียวกันโดยคนละ session */
-export function findConflicts(rows: ScheduleRow[]): Conflict[] {
+export function findConflicts(rows: ScheduleRow[], maskName: (v: string) => string = (v) => v): Conflict[] {
   const maps = {
     teacher: new Map<string, Set<string>>(),
     group: new Map<string, Set<string>>(),
@@ -25,7 +25,7 @@ export function findConflicts(rows: ScheduleRow[]): Conflict[] {
         maps[kind].get(k)!.add(r.session_key);
         labels.set(`${kind}|${k}`, label);
       };
-      add("teacher", r.teacher_id, `ครู ${r.teacher_name}`);
+      add("teacher", r.teacher_id, `ครู ${maskName(r.teacher_name)}`);
       add("group", r.student_group_id, `กลุ่ม ${r.group_code}`);
       add("room", r.room_id, `ห้อง ${r.room_code ?? ""}`);
     }

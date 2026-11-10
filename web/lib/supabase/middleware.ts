@@ -4,7 +4,7 @@ import { supabaseAnonKey, supabaseUrl } from "./env";
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/privacy"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });

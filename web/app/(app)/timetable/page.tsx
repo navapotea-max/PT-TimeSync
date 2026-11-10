@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import TimetableGrid, { toSessions, type Session, type ViewMode } from "@/components/TimetableGrid";
+import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
 import { conflictsForMove, findConflicts } from "@/lib/conflicts";
 import { configOf, DAY_NAMES, roomTypeLabel } from "@/lib/constants";
@@ -14,6 +15,7 @@ const MODE_LABEL: Record<ViewMode, string> = { group: "ตารางเรี�
 export default function TimetablePage() {
   const supabase = createClient();
   const profile = useProfile();
+  const privacy = usePrivacy();
   const isAdmin = profile.role === "admin";
 
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -73,9 +75,9 @@ export default function TimetablePage() {
   // ---------- derived ----------
   const targets = useMemo(() => {
     if (mode === "group") return groups.map((g) => ({ id: g.id, label: `${g.group_code} — ${g.group_name}` }));
-    if (mode === "teacher") return teachers.map((t) => ({ id: t.id, label: `${t.teacher_code} — ${t.name}` }));
+    if (mode === "teacher") return teachers.map((t) => ({ id: t.id, label: `${t.teacher_code} — ${privacy.name(t.name)}` }));
     return rooms.map((r) => ({ id: r.id, label: `${r.room_code} — ${r.room_name}` }));
-  }, [mode, groups, teachers, rooms]);
+  }, [mode, groups, teachers, rooms, privacy]);
 
   useEffect(() => {
     if (targets.length && !targets.some((t) => t.id === targetId)) setTargetId(targets[0].id);
@@ -89,7 +91,7 @@ export default function TimetablePage() {
     return toSessions(rows.filter((r) => keys.has(r.session_key)));
   }, [rows, mode, targetId, matchRow]);
 
-  const conflicts = useMemo(() => findConflicts(rows), [rows]);
+  const conflicts = useMemo(() => findConflicts(rows, privacy.name), [rows, privacy]);
   const conflictKeys = useMemo(() => new Set(conflicts.flatMap((c) => c.sessionKeys)), [conflicts]);
   const stats = useMemo(() => ({
     draft: rows.filter((r) => r.status === "draft").length,
@@ -100,14 +102,14 @@ export default function TimetablePage() {
     const m = new Map<string, { code: string; name: string; who: string; hours: number }>();
     viewSessions.forEach((s) => {
       const r = s.rows[0];
-      const who = mode === "group" ? r.teacher_name : Array.from(new Set(s.rows.map((x) => x.group_code))).join(", ");
+      const who = mode === "group" ? privacy.name(r.teacher_name) : Array.from(new Set(s.rows.map((x) => x.group_code))).join(", ");
       const k = `${r.subject_code}|${who}`;
       const e = m.get(k) ?? { code: r.subject_code, name: r.subject_name, who, hours: 0 };
       e.hours += s.end - s.start + 1;
       m.set(k, e);
     });
     return Array.from(m.values()).sort((a, b) => a.code.localeCompare(b.code));
-  }, [viewSessions, mode]);
+  }, [viewSessions, mode, privacy]);
 
   // ---------- actions ----------
   async function updateSession(key: string, patch: Partial<ScheduleRow>) {
@@ -179,7 +181,8 @@ export default function TimetablePage() {
           cellText: (rs) => {
             const r = rs[0];
             const g = Array.from(new Set(rs.map((x) => x.group_code))).join(", ");
-            const extra = mode === "group" ? r.teacher_name : mode === "teacher" ? g : `${g} / ${r.teacher_name}`;
+            const tn = privacy.name(r.teacher_name);
+            const extra = mode === "group" ? tn : mode === "teacher" ? g : `${g} / ${tn}`;
             return `${r.subject_code}\n${r.subject_name}\n${extra}\n${mode === "room" ? "" : r.room_code ?? ""}`;
           },
         };
@@ -282,7 +285,7 @@ export default function TimetablePage() {
                   <button onClick={() => setSelected(null)}>✕</button>
                 </div>
                 <p>{selRow.subject_name}</p>
-                <p>ครู: {selRow.teacher_name}</p>
+                <p>ครู: {privacy.name(selRow.teacher_name)}</p>
                 <p>กลุ่ม: {Array.from(new Set(selected.rows.map((r) => r.group_code))).join(", ")}</p>
                 <p>เวลา: {DAY_NAMES[selected.day]} คาบ {selected.start}-{selected.end}</p>
                 <p>ต้องการห้อง: {roomTypeLabel(selRow.required_room_type)}</p>

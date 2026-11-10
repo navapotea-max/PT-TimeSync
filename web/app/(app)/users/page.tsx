@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePrivacy } from "@/components/Preferences";
 import { AdminOnly } from "@/components/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile, Role, StudentGroup, Teacher } from "@/lib/types";
 
 export default function UsersPage() {
   const supabase = createClient();
+  const privacy = usePrivacy();
   const [users, setUsers] = useState<Profile[]>([]);
   const [groups, setGroups] = useState<StudentGroup[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -50,12 +52,12 @@ export default function UsersPage() {
         {msg && <p className="text-sm text-brand-700">{msg}</p>}
         <div className="card overflow-x-auto p-0">
           <table className="w-full">
-            <thead><tr><th className="th">อีเมล</th><th className="th">ชื่อ</th><th className="th">สิทธิ์</th><th className="th">ผูกกับครู</th><th className="th">กลุ่มนักเรียน</th></tr></thead>
+            <thead><tr><th className="th">อีเมล</th><th className="th">ชื่อ</th><th className="th">สิทธิ์</th><th className="th">ผูกกับครู</th><th className="th">กลุ่มนักเรียน</th><th className="th">ยินยอม PDPA</th></tr></thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.id}>
-                  <td className="td">{u.email}</td>
-                  <td className="td">{u.full_name}</td>
+                  <td className="td">{privacy.email(u.email)}</td>
+                  <td className="td">{privacy.name(u.full_name)}</td>
                   <td className="td">
                     <select className="input" value={u.role} onChange={(e) => update(u.id, { role: e.target.value as Role })}>
                       <option value="admin">ผู้ดูแลระบบ</option>
@@ -68,7 +70,7 @@ export default function UsersPage() {
                       onChange={(e) => linkTeacher(u.id, e.target.value)}>
                       <option value="">—</option>
                       {teachers.filter((t) => !t.user_id || t.user_id === u.id).map((t) => (
-                        <option key={t.id} value={t.id}>{t.teacher_code} {t.name}</option>
+                        <option key={t.id} value={t.id}>{t.teacher_code} {privacy.name(t.name)}</option>
                       ))}
                     </select>
                   </td>
@@ -78,6 +80,11 @@ export default function UsersPage() {
                       <option value="">—</option>
                       {groups.map((g) => <option key={g.id} value={g.id}>{g.group_code}</option>)}
                     </select>
+                  </td>
+                  <td className="td text-xs">
+                    {u.pdpa_consent_at
+                      ? <span className="text-green-700">✓ {new Date(u.pdpa_consent_at).toLocaleDateString("th-TH")}</span>
+                      : <span className="text-amber-800">ยังไม่ยินยอม</span>}
                   </td>
                 </tr>
               ))}

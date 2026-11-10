@@ -11,6 +11,8 @@ export interface Field {
   fk?: { table: string; labelCols: string[]; order: string };
   help?: string;
   hideInTable?: boolean;
+  /** ข้อมูลส่วนบุคคล — ถูกปิดบังเมื่อเปิดโหมด PDPA */
+  pii?: "name" | "email";
 }
 
 export interface Lookup {
@@ -66,8 +68,8 @@ export const ENTITIES: Record<string, Entity> = {
     uniqueKey: ["teacher_code"],
     fields: [
       { key: "teacher_code", label: "รหัสครู", type: "text", required: true },
-      { key: "name", label: "ชื่อ-สกุล", type: "text", required: true },
-      { key: "email", label: "อีเมล (ใช้ผูกบัญชีล็อกอิน)", type: "text" },
+      { key: "name", label: "ชื่อ-สกุล", type: "text", required: true, pii: "name" },
+      { key: "email", label: "อีเมล (ใช้ผูกบัญชีล็อกอิน)", type: "text", pii: "email" },
       { key: "department", label: "แผนกวิชา", type: "text" },
       { key: "max_hours_per_week", label: "คาบสอนสูงสุด/สัปดาห์", type: "number" },
       { key: "unavailable_times", label: "เวลาที่ไม่สะดวกสอน", type: "json", hideInTable: true,
@@ -147,7 +149,7 @@ export const ENTITIES: Record<string, Entity> = {
       { key: "subject_id", label: "รายวิชา", type: "fk", required: true,
         fk: { table: "subjects", labelCols: ["subject_code", "subject_name"], order: "subject_code" } },
       { key: "teacher_id", label: "ครูผู้สอน", type: "fk", required: true,
-        fk: { table: "teachers", labelCols: ["teacher_code", "name"], order: "teacher_code" } },
+        fk: { table: "teachers", labelCols: ["teacher_code", "name"], order: "teacher_code" }, pii: "name" },
       { key: "total_hours_required", label: "คาบ/สัปดาห์", type: "number", help: "เว้นว่าง = ท.+ป. ของรายวิชา" },
       { key: "block_sizes", label: "แบ่งก้อนคาบ", type: "intarray", help: "เช่น 4,3 (เว้นว่าง = อัตโนมัติ)" },
       { key: "preferred_room_id", label: "ห้องที่ต้องการ", type: "fk",

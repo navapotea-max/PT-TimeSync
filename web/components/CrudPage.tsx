@@ -1,13 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { maskEmail, maskName, usePrivacy } from "@/components/Preferences";
 import { coerce, type Entity, type Field } from "@/lib/entities";
 import { createClient } from "@/lib/supabase/client";
 
 type Row = Record<string, unknown> & { id: string };
 type Options = Record<string, { value: string; label: string }[]>;
 
-function display(field: Field, value: unknown, fkOptions: Options): string {
+function display(field: Field, value: unknown, fkOptions: Options, privacy = false): string {
+  const out = rawDisplay(field, value, fkOptions);
+  if (!privacy || !field.pii || out === "-") return out;
+  if (field.pii === "email") return maskEmail(out);
+  // fk ที่มีรหัสนำหน้า (เช่น "T01 ครูสมชาย ใจดี") ปิดบังเฉพาะส่วนชื่อ
+  if (field.type === "fk") { const [code, ...rest] = out.split(" "); return `${code} ${maskName(rest.join(" "))}`; }
+  return maskName(out);
+}
+
+function rawDisplay(field: Field, value: unknown, fkOptions: Options): string {
   if (value === null || value === undefined || value === "") return "-";
   if (field.type === "boolean") return value ? "✓" : "";
   if (field.type === "fk") return fkOptions[field.key]?.find((o) => o.value === value)?.label ?? "?";
@@ -26,6 +36,7 @@ function toInput(field: Field, value: unknown): string {
 
 export default function CrudPage({ entity }: { entity: Entity }) {
   const supabase = createClient();
+  const { enabled: privacy } = usePrivacy();
   const [rows, setRows] = useState<Row[]>([]);
   const [fkOptions, setFkOptions] = useState<Options>({});
   const [search, setSearch] = useState("");
@@ -71,7 +82,7 @@ export default function CrudPage({ entity }: { entity: Entity }) {
     const s = search.trim().toLowerCase();
     if (!s) return rows;
     return rows.filter((r) =>
-      entity.fields.some((f) => display(f, r[f.key], fkOptions).toLowerCase().includes(s)));
+      entity.fields.some((f) => rawDisplay(f, r[f.key], fkOptions).toLowerCase().includes(s)));
   }, [rows, search, entity, fkOptions]);
 
   function openNew() {
@@ -160,7 +171,7 @@ export default function CrudPage({ entity }: { entity: Entity }) {
             )}
             {filtered.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50">
-                {tableFields.map((f) => <td key={f.key} className="td">{display(f, r[f.key], fkOptions)}</td>)}
+                {tableFields.map((f) => <td key={f.key} className="td">{display(f, r[f.key], fkOptions, privacy)}</td>)}
                 <td className="td whitespace-nowrap text-right">
                   <button className="mr-3 text-brand-600 hover:underline" onClick={() => openEdit(r)}>แก้ไข</button>
                   <button className="text-red-600 hover:underline" onClick={() => remove(r)}>ลบ</button>

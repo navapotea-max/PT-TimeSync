@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/Preferences";
+import { PDPA_VERSION } from "@/lib/pdpa";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -9,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [consent, setConsent] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -21,8 +25,13 @@ export default function LoginPage() {
       if (error) setMsg({ ok: false, text: "เข้าสู่ระบบไม่สำเร็จ: " + error.message });
       else window.location.href = "/";
     } else {
+      if (!consent) {
+        setMsg({ ok: false, text: "กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนสมัครสมาชิก" });
+        setBusy(false);
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({
-        email, password, options: { data: { full_name: fullName } },
+        email, password, options: { data: { full_name: fullName, pdpa_consent_version: PDPA_VERSION } },
       });
       if (error) setMsg({ ok: false, text: "สมัครไม่สำเร็จ: " + error.message });
       else if (data.session) window.location.href = "/";
@@ -32,7 +41,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-900 to-brand-600 p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-900 to-brand-600 p-4 dark:from-slate-950 dark:to-brand-900">
+      <div className="absolute right-4 top-4"><ThemeToggle compact /></div>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-xl">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-brand-900">ระบบจัดตารางเรียน-ตารางสอน</h1>
@@ -54,8 +64,17 @@ export default function LoginPage() {
             <input type="password" className="input" value={password} minLength={6}
               onChange={(e) => setPassword(e.target.value)} required />
           </div>
+          {mode === "signup" && (
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-1 h-4 w-4" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span>
+                ข้าพเจ้ายินยอมให้วิทยาลัยเก็บและใช้ข้อมูลส่วนบุคคลเพื่อการจัดตารางเรียนตารางสอน ตาม{" "}
+                <Link href="/privacy" target="_blank" className="text-brand-600 underline">นโยบายความเป็นส่วนตัว</Link>
+              </span>
+            </label>
+          )}
           {msg && <p className={`text-sm ${msg.ok ? "text-green-700" : "text-red-600"}`}>{msg.text}</p>}
-          <button className="btn-primary w-full" disabled={busy}>
+          <button className="btn-primary w-full" disabled={busy || (mode === "signup" && !consent)}>
             {busy ? "กำลังดำเนินการ..." : mode === "login" ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
           </button>
         </form>
@@ -67,6 +86,9 @@ export default function LoginPage() {
         </p>
         <p className="mt-2 text-center text-xs text-slate-400">
           ครูที่อีเมลตรงกับข้อมูลครูในระบบจะได้สิทธิ์ &quot;ครูผู้สอน&quot; อัตโนมัติ
+        </p>
+        <p className="mt-2 text-center text-xs">
+          <Link href="/privacy" className="text-brand-600 underline">นโยบายความเป็นส่วนตัว (PDPA)</Link>
         </p>
       </div>
     </div>

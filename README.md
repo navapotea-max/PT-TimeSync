@@ -67,6 +67,9 @@ flowchart LR
 - ✅ มุมมอง ตารางเรียน (กลุ่ม) / ตารางสอน (ครู) / ตารางการใช้ห้อง
 - ✅ ฉบับร่าง → **เผยแพร่** (ครู/นักเรียนเห็นเฉพาะตารางที่เผยแพร่แล้ว)
 - ✅ ส่งออก **Excel** (ทีละรายการ หรือทุกกลุ่ม/ทุกครู/ทุกห้อง แยกแท็บ) และ **พิมพ์/บันทึกเป็น PDF**
+- ✅ **สำรอง / กู้คืนข้อมูล** (.json เก็บใน Storage อัตโนมัติ, ส่งออกทุกตารางเป็น .xlsx, กู้คืนแบบรวม/แทนที่ และสำรองอัตโนมัติก่อนกู้คืน)
+- ✅ **PDPA**: ขอความยินยอมตอนสมัคร, หน้านโยบายความเป็นส่วนตัว, ดาวน์โหลดข้อมูลของตนเอง, ยื่นคำร้องขอแก้ไข/ลบ/ถอนความยินยอม และ **โหมดความเป็นส่วนตัว** ปิดบังชื่อ-อีเมลบนหน้าจอ (เหมาะกับการฉายจอประชุม)
+- ✅ **โหมดมืด / โหมดสว่าง / ตามระบบ** (พิมพ์ PDF เป็นโหมดสว่างเสมอ)
 
 ---
 
@@ -197,9 +200,10 @@ git push -u origin main
 1. Supabase Dashboard → เมนูซ้าย **SQL Editor** → **New query**
 2. เปิดไฟล์ `supabase/migrations/20251101000000_init_schema.sql` คัดลอก **ทั้งหมด** มาวาง → กด **Run** (Ctrl+Enter)
    ต้องขึ้น `Success. No rows returned`
-3. (ไม่บังคับ แต่แนะนำสำหรับทดลอง) กด **New query** อีกครั้ง วางเนื้อหาไฟล์ `supabase/seed.sql` → **Run**
+3. กด **New query** อีกครั้ง วางเนื้อหาไฟล์ `supabase/migrations/20251110000000_backup_pdpa.sql` → **Run** (ระบบสำรองข้อมูล + PDPA)
+4. (ไม่บังคับ แต่แนะนำสำหรับทดลอง) กด **New query** อีกครั้ง วางเนื้อหาไฟล์ `supabase/seed.sql` → **Run**
    จะได้ข้อมูลตัวอย่าง: ครู 12 คน, ห้อง 10 ห้อง, วิชา 18 วิชา, กลุ่มนักเรียน 6 กลุ่ม, ภาระงานสอน 40 รายการ
-4. ตรวจสอบที่ **Table Editor** จะเห็นตาราง `semesters, subjects, teachers, rooms, student_groups, profiles, enrollments, schedules, schedule_jobs`
+5. ตรวจสอบที่ **Table Editor** จะเห็นตาราง `semesters, subjects, teachers, rooms, student_groups, profiles, enrollments, schedules, schedule_jobs`
 
 **วิธี B — ผ่าน Supabase CLI (สำหรับนักพัฒนา)**
 
@@ -479,6 +483,8 @@ git push
 | `enrollments` | `semester_id`, `student_group_id`, `subject_id`, `teacher_id`, `total_hours_required`, `block_sizes`, `preferred_room_id` | `total_hours_required` เติมอัตโนมัติจาก ท+ป |
 | `schedules` | `enrollment_id`, `room_id`, `day_of_week`, `start_period`, `end_period`, `status`, `is_locked`, `session_key` | **เพิ่ม** `is_locked` (ล็อกคาบ) และ `session_key` (แถวของกลุ่มคู่ขนานที่เรียนรวมใช้ key เดียวกัน) |
 | `schedule_jobs` | `status`, `progress`, `message`, `result` (JSONB) | **เพิ่ม** สำหรับ Realtime progress และประวัติการจัด |
+| `data_requests` | `user_id`, `request_type`, `detail`, `status`, `admin_note` | **เพิ่ม** คำร้องของเจ้าของข้อมูลตาม PDPA (ผู้ใช้เห็นเฉพาะของตนเอง) |
+| `profiles.pdpa_consent_at` | วันเวลาที่ยินยอม + เวอร์ชันนโยบาย | **เพิ่ม** หลักฐานการให้ความยินยอม |
 | view `schedule_details` | รวมข้อมูลตาราง + วิชา + ครู + กลุ่ม + ห้อง | ใช้แสดงผล (เคารพ RLS) |
 
 **สิทธิ์ (Row Level Security)**

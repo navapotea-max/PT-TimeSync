@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePrivacy } from "@/components/Preferences";
 import { useProfile } from "@/components/ProfileProvider";
 import { createClient } from "@/lib/supabase/client";
 import type { ScheduleJob, Semester } from "@/lib/types";
@@ -18,6 +19,7 @@ const TABLES = [
 export default function Dashboard() {
   const supabase = createClient();
   const profile = useProfile();
+  const privacy = usePrivacy();
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [semester, setSemester] = useState<Semester | null>(null);
   const [job, setJob] = useState<ScheduleJob | null>(null);
@@ -44,7 +46,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">สวัสดี {profile.full_name}</h1>
+        <h1 className="text-2xl font-bold">สวัสดี {privacy.name(profile.full_name)}</h1>
         <p className="text-slate-500">
           ภาคเรียนปัจจุบัน: <b>{semester ? semester.name : "ยังไม่ได้ตั้งค่า"}</b>
         </p>
