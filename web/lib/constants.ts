@@ -55,4 +55,4 @@ export function configOf(s: { config?: SemesterConfig | null } | null | undefine
   return { ...DEFAULT_CONFIG, ...(s?.config ?? {}) };
 }
 
-export const ENGINE_URL = process.env.NEXT_PUBLIC_ENGINE_URL ?? "http://localhost:8000";
+export const ENGINE_URL = (process.env.NEXT_PUBLIC_ENGINE_URL ?? "http://localhost:8000").trim().replace(/\/(health)?\/?$/, "");
